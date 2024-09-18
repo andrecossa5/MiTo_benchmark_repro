@@ -2,7 +2,7 @@
 Reproducibility of all MI_TO paper downstream analyses. To reproduce the main results:
 
 1. Clone and cd to this repository.
-2. Install all the desired packages with mamba:
+2. Install all the desired packages with conda/mamba:
 
 ```bash
 mamba env create -f envs/environment.yml -n MI_TO

@@ -1,11 +1,12 @@
 """
-MT-SNVs AF distribution and fit to known distribution families. 
+Discretization. NB and tresholds.
 """
 
 import os
 from mito_utils.utils import *
 from mito_utils.preprocessing import *
 from mito_utils.genotyping import *
+from mito_utils.genotyping import _genotype_mix
 from mito_utils.dimred import *
 from mito_utils.plotting_base import *
 from mito_utils.embeddings_plots import *
@@ -33,14 +34,23 @@ path_meta = os.path.join(path_data, 'cells_meta.csv')
 afm = read_one_sample(path_afm, path_meta, sample=sample, nmads=5, mean_coverage=25)
 
 # Read and filter
-_, a = filter_cells_and_vars(afm, filtering=filtering, max_AD_counts=3, af_confident_detection=0, min_cell_number=10)
+a, report = filter_cells_and_vars(
+    afm, filtering=filtering, 
+    max_AD_counts=3, af_confident_detection=.01, min_cell_number=10,
+    lineage_column='GBC', compute_enrichment=True,
+    path_dbSNP=os.path.join(path_data, 'miscellanea', 'dbSNP_MT.txt'),
+    path_REDIdb=os.path.join(path_data, 'miscellanea', 'REDIdb_MT.txt'),
+)
+
+(a.var.loc[:,a.var.columns.str.startswith('FDR')]<=.1).sum(axis=0)
+
 AD, DP, _ = get_AD_DP(a)
 AD = AD.A.T
 DP = DP.A.T
 
 # VAF spectrum
 fig, ax = plt.subplots(figsize=(4.5,4.5))
-vars_AF_dist(a, ax=ax, color='darkred', linewidth=1, linestyle='-')
+vars_AF_dist(a, ax=ax, color='darkred', linewidth=1, linestyle='--')
 fig.tight_layout()
 plt.show()
 
@@ -57,126 +67,169 @@ fig.tight_layout()
 plt.show()
 
 
-##
-
-
-# Benchmark
-geno = genotype_MI_TO(a, debug=True)
-geno.sum(axis=1)
-
-for t in np.linspace(.5,.9,5):
-    labels = a.obs['GBC']
-    evaluate_metric_with_gt(
-        a, metric='custom_MI_TO_jaccard', labels=labels, bin_method='MI_TO', 
-        discretization_kwargs={'t_prob':t}
-    )
-    evaluate_metric_with_gt(
-        a, metric='jaccard', labels=labels, bin_method='vanilla'
-    )
 
 
 ##
 
 
-X, dimnames = reduce_dimensions(a, method='UMAP', metric='cosine', n_comps=2)
-df_ = pd.DataFrame(X, columns=dimnames, index=a.obs_names).join(a.obs)
+# P-P plot
+order = np.argsort((a.X>0).sum(axis=0))
+i_ = int(np.round(order.size / 2)-1)
+variants = a.var_names[order[::-1][:2]].to_list() + a.var_names[order[i_:(i_+2)]].to_list() + a.var_names[order[:2]].to_list()
+dists = ['binom', 'nbinom', 'betabinom', 'mixbinom']
 
-fig, ax = plt.subplots(figsize=(4.5,4.5))
-draw_embeddings(df_, cat='GBC', ax=ax, legend_kwargs={'loc':'upper right', 'bbox_to_anchor':(1,1)})
+fig, axs = plt.subplots(nrows=4, ncols=len(variants), figsize=(15,11), sharex=True, sharey=True)
+
+i = 0
+for row, dist in enumerate(dists):
+    for variant in variants:
+
+        idx = np.where(a.var_names==variant)[0][0]
+        ad = AD[:,idx]
+        dp = DP[:,idx]
+        wt = dp - ad
+
+        if dist == 'binom':
+            ad_th, _ = fit_binom(ad, dp)  
+        elif dist == 'nbinom':
+            ad_th, _ = fit_nbinom(ad, dp)  
+        elif dist == 'betabinom':
+            ad_th, _ = fit_betabinom(ad, dp)    
+        elif dist == 'mixbinom':
+            ad_th, _ = fit_mixbinom(ad, dp)          
+
+        # CDFs
+        X = np.concatenate((ad, ad_th))
+        bins = np.linspace(np.min(X)-0.5, np.max(X)+0.5)
+        ad_counts, _ = np.histogram(ad, bins=bins)
+        ad_th_counts, _ = np.histogram(ad_th, bins=bins) 
+        empirical_cdf = ad_counts.cumsum() / ad_counts.sum()
+        theoretical_cdf = ad_th_counts.cumsum() / ad_th_counts.sum()
+
+        # Stats variables
+        mean_af = (ad/(dp+0.00001)).mean()
+        freq =  ((ad/(dp+0.00001))>0).sum()
+
+        ax = axs.ravel()[i]
+        ax.plot(theoretical_cdf, empirical_cdf, 'o-')
+        ax.plot([0,1], [0,1], 'r--')
+        corr, p = stats.pearsonr(empirical_cdf, theoretical_cdf)
+        if dist == 'binom':
+            ax.set(title=f'{variant} \n Mean af: {mean_af:.2f}, n+: {int(freq)} \n Corr: {corr:.2f}; p {p:.2f}', ylabel='Empirical CDF', xlabel=f'{dist} CDF')
+        else:
+            ax.set(title=f'Corr: {corr:.2f}; p {p:.2f}', ylabel='Empirical CDF', xlabel=f'{dist} CDF')
+        
+        # Update figure count
+        i += 1
+
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_results, 'AD_counts_dist_CDF.png'), dpi=400)
 
 
-tree = build_tree(a, solver='NJ')
-tree.cell_meta['GBC'] = a.obs['GBC'].astype(str)
-tree.cell_meta = tree.cell_meta.join(pd.DataFrame(a.X, index=a.obs_names, columns=a.var_names))
+##
 
-variants = get_supporting_muts(tree, a)
 
-fig, ax = plt.subplots(figsize=(7,7))
-plot_tree(tree, ax=ax, meta=['GBC'],#+variants, 
-          colorstrip_width=2, colorstrip_spacing=.2, orient=90, vmin_annot=0, vmax_annot=.05)
+# BIC and AD fits
+fig, axs = plt.subplots(nrows=1, ncols=len(variants), figsize=(19,4))
+
+dists_ = ['Observed'] + dists
+colors = {k:v for k,v in zip(dists_, ten_godisnot)}
+
+for i,variant in enumerate(variants):
+
+    ax = axs.ravel()[i]
+    pos_y = .9
+    delta = .08
+
+    for row, dist in enumerate(dists_):
+
+        idx = np.where(a.var_names==variant)[0][0]
+        ad = AD[:,idx]
+        dp = DP[:,idx]
+        wt = dp - ad
+
+        if dist == 'binom':
+            x, d = fit_binom(ad, dp)  
+        elif dist == 'nbinom':
+            x, d = fit_nbinom(ad, dp)  
+        elif dist == 'betabinom':
+            x, d = fit_betabinom(ad, dp)    
+        elif dist == 'mixbinom':
+            x, d = fit_mixbinom(ad, dp)      
+        else:
+            x = ad   
+            d = None 
+
+        # Stats variables
+        bic = d['BIC'] if isinstance(d, dict) else None
+        L = d['L'] if isinstance(d, dict) else None
+        mean_af =  (ad/(dp+0.00001)).mean()
+        freq =  ((ad/(dp+0.00001))>0).sum()
+
+        sns.kdeplot(x, ax=ax, color=colors[dist], fill=True, alpha=.3)
+        ax.set(title=f'{variant} \n Mean af: {mean_af:.2f}, n+: {int(freq)}', ylabel='Density', xlabel=f'n ALT')
+        if d is not None:
+            ax.text(.28, pos_y, f'{dist} BIC: {bic:.2f}', transform=ax.transAxes, size=9)
+            pos_y -= delta
+    
+    if i == 2:
+        add_legend('Distribution', colors=colors, ax=ax, bbox_to_anchor=(1.15,-.3), loc='center', ticks_size=10, ncols=len(dist), label_size=11)
+
+fig.subplots_adjust(left=.05, right=.95, top=.8, bottom=.25, wspace=.4)
+fig.savefig(os.path.join(path_results, 'AD_counts_dists.png'), dpi=300)
+
+
+##
+
+
+# 2 components mixture of binomials
+variant = variants[0]
+colors = { 'observed': 'k', 'c0' : '#217043', 'c1' : '#bd4c0f' }
+
+fig, axs = plt.subplots(nrows=1, ncols=len(variants), figsize=(19,3.7))
+
+for i,variant in enumerate(variants):
+
+    idx = np.where(a.var_names==variant)[0][0]
+    ad = AD[:,idx]
+    dp = DP[:,idx]
+    wt = dp - ad
+
+    np.random.seed(1234)
+    model = MixtureBinomial(n_components=2, tor=1e-20)
+    model.fit((ad, dp), max_iters=500, early_stop=True)
+
+    # Access the estimated parameters
+    ps = model.params[:2]
+    pis = model.params[2:]
+    idx1 = np.argmax(ps)
+    idx0 = 0 if idx1 == 1 else 1
+    p1 = ps[idx1]
+    p0 = ps[idx0]
+    pi1 = pis[idx1]
+    pi0 = pis[idx0]
+    d = {'p':[p0,p1], 'pi':[pi0,pi1]}
+
+    ad0_th = dp * p0
+    ad1_th = dp * p1
+
+    ax = axs.ravel()[i]
+    sns.kdeplot(ad, ax=ax, color="k", fill=True, alpha=.3)
+    sns.kdeplot(ad0_th, ax=ax, color="#217043", fill=True, alpha=.3)
+    sns.kdeplot(ad1_th, ax=ax, color="#bd4c0f", fill=True, alpha=.3)
+    ax.set(title=f'{variant} \n Mean af: {mean_af:.2f}, n+: {int(freq)}', ylabel='Density', xlabel=f'n ALT')
+    if i==0:
+        add_legend('Distribution', colors=colors, ax=ax, bbox_to_anchor=(1,1), loc='upper right', ticks_size=10, label_size=10, artists_size=10)
+
 fig.tight_layout()
-plt.show()
-
-tree.n_character
-
-help(tree.remove_leaves_and_prune_lineages)
+fig.savefig(os.path.join(path_results, 'AD_counts_dist_bibonm_mixture.png'), dpi=300)
 
 
-
-
-cs.tl.compute_expansion_pvalues(tree, min_clade_size=(0.5 * tree.n_cell), min_depth=1)
-# this specifies a p-value for identifying expansions unlikely to have occurred
-# in a neutral model of evolution
-probability_threshold = 0.1
-
-expanding_nodes = []
-for node in tree.depth_first_traverse_nodes():
-    if tree.get_attribute(node, "expansion_pvalue") < probability_threshold:
-        expanding_nodes.append(node)
+##
 
 
 
 
 
 
-tree.collapse_mutationless_edges(True)
 
-dir(tree)
-
-len(tree.internal_nodes)
-
-CI(tree)
-RI(tree)
-
-
-[ len(v) for k,v in get_clades(tree).items() ]
-
-cells_ = list(list(get_clades(tree).values())[1])
-list(get_clades(tree).keys())[1]
-
-tree.subset_clade('cassiopeia_internal_nodeba35136b13cf23c5f60364a2')
-
-
-tree
-
-
-
-fig, ax = plt.subplots(figsize=(7,7))
-plot_tree(tree, ax=ax, meta=['GBC'],#+variants, 
-          colorstrip_width=2, colorstrip_spacing=.2, orient=90, vmin_annot=0, vmax_annot=.05)
-fig.tight_layout()
-plt.show()
-
-
-
-
-cells = t_removed.cell_meta.query('GBC=="TGCAGTTTTGGTGCTCTA"').index
-
-
-
-t_ = t_removed.copy()
-T = t_.get_tree_topology()
-
-for cell in cells:
-    T.remove_node(cell)
-
-cells = t_.character_matrix.index[t_.character_matrix.index.isin(T.nodes)]
-t_removed_2 = CassiopeiaTree(
-    tree=T, 
-    character_matrix=t_.character_matrix.loc[cells],
-    cell_meta=t_.cell_meta.loc[cells,:]
-)
-
-t_removed_2.leaves
-t_removed_2.cell_meta
-
-
-fig, ax = plt.subplots(figsize=(7,7))
-plot_tree(t_removed, ax=ax, meta=['GBC'],#+variants, 
-          colorstrip_width=2, colorstrip_spacing=.2, orient=90, vmin_annot=0, vmax_annot=.05)
-fig.tight_layout()
-plt.show()
-
-t_removed.cell_meta['GBC'].value_counts()

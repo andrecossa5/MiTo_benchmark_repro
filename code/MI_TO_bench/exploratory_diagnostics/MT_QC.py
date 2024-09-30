@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from mito_utils.preprocessing import *
 from mito_utils.plotting_base import *
+from mito_utils.diagnostic_plots import *
 matplotlib.use('macOSX')
 
 
@@ -77,11 +78,82 @@ fig.savefig(os.path.join(path_results, 'MT_QC', 'strand_bias.png'))
 # Cell and site coverage
 sample = 'MDA_clones'
 path_afm = os.path.join(path_data, 'AFMs', 'MDA_clones.h5ad')
-afm = read_one_sample(path_afm, path_meta=None, sample=sample, nmads=5, mean_coverage=25)
+afm = make_AFM(path_afm, path_meta=None, sample=sample, nmads=5, mean_cov_all=25)
 
-compute_metrics_raw(afm)
+# Radial plot
+fig, ax = plt.subplots(figsize=(4.5,4.5))
+plot_ncells_nAD(afm, ax=ax, title=sample, s=5)
+fig.tight_layout()
+fig.savefig(os.path.join(path_results, 'MT_QC', f'{sample}_ncells_nAD.png'), dpi=1000)
+
+
+fig, ax = plt.subplots(figsize=(4.5,4.5), subplot_kw={'projection': 'polar'})
+MT_coverage_by_gene_polar(afm, ax=ax, sample=sample)
+fig.tight_layout()
+fig.savefig(os.path.join(path_results, 'MT_QC', f'{sample}_MT_coverage.png'), dpi=1000)
 
 
 ##
 
 
+# Legend
+df_mt = pd.DataFrame(MAESTER_genes_positions, columns=['gene', 'start', 'end']).set_index('gene').sort_values('start')
+colors = { k:v for k,v in zip(df_mt.index, sc.pl.palettes.default_102[:df_mt.shape[0]])}
+
+fig, ax = plt.subplots(figsize=(10,5))
+ax.axis('off')
+add_legend(ax=ax, label='Target MT-genes', colors=colors, ncols=round(len(colors)/2), bbox_to_anchor=(.5,.5), loc='center',
+           label_size=12, artists_size=10, ticks_size=10)
+fig.tight_layout()
+fig.savefig(os.path.join(path_results, 'MT_QC', 'MT_genes.png'), dpi=1000)
+
+
+##
+
+
+# Expression of MT-genes
+sample = 'MDA_clones'
+path_afm = os.path.join(path_data, 'AFMs', 'MDA_clones.h5ad')
+path_meta = os.path.join(path_data, 'cells_meta.csv')
+afm = make_AFM(path_afm, path_meta=None, sample=sample, nmads=5, mean_cov_all=25)
+mt_expr = pd.read_csv(os.path.join(path_data, 'miscellanea', 'mt_genes_expr.csv'), index_col=0)
+cells = list( set(afm.obs_names) & set(mt_expr.index))
+
+# MT-gene mean expression vs MAESTER mean base coverage
+mean_expr = mt_expr.loc[cells,:].mean(axis=0)
+
+# Annotate MT-genome sites
+mt_genes_positions = [ x for x in all_mt_genes_positions if x[0] in mt_expr.columns ]
+sites = afm.uns['per_position_coverage'].columns
+annot = {}
+for x in sites:
+    x = int(x)
+    mapped = False
+    for mt_gene, start, end in mt_genes_positions:
+        if x>=start and x<=end:
+            annot[str(x)] = mt_gene
+            mapped = True
+    if not mapped:
+        annot[str(x)] = 'other'
+
+mean_site_cov = afm[cells,:].uns['per_position_coverage'].T.mean(axis=1).to_frame('cov')
+mean_site_cov['gene'] = pd.Series(annot)
+mean_site_cov = mean_site_cov.query('gene!="other"').groupby('gene')['cov'].mean()
+mean_site_cov = mean_site_cov[mean_expr.index]
+
+##
+
+fig, ax = plt.subplots(figsize=(4.5,4.5))
+ax.plot(mean_expr.values, mean_site_cov.values, 'ko')
+sns.regplot(data=pd.DataFrame({'expr':mean_expr, 'cov':mean_site_cov}), 
+            x='expr', y='cov', ax=ax, scatter=False)
+format_ax(ax, title='MT-transcripts counts vs site coverage',
+          xlabel='Mean expression (gene nUMI, 10x)', 
+          ylabel='Mean site coverage (per-site nUMI, MAESTER)')
+corr = np.corrcoef(mean_expr.values, mean_site_cov.values)[0,1]
+ax.text(.05, .9, f'Pearson\'s r: {corr:.2f}', transform=ax.transAxes)
+fig.tight_layout()
+fig.savefig(os.path.join(path_results, 'MT_QC', f'{sample}_site_coverage_by_gene_expression.png'), dpi=500)
+
+
+##

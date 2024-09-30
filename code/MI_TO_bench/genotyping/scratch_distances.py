@@ -27,20 +27,21 @@ path_results = os.path.join(path_main, 'results',  'MI_TO_bench')
 make_folder(path_results, 'discretization', overwrite=False)
 
 # Params
-sample = 'MDA_clones'
+sample = 'MDA_PT'
 filtering = 'MI_TO'
 
 # Make an annotated AF matrix for the sample
 path_afm = os.path.join(path_data, 'AFMs', f'{sample}.h5ad')
 path_meta = os.path.join(path_data, 'cells_meta.csv')
-afm = make_AFM(path_afm, path_meta=None, sample=sample, cell_filter='filter1', 
+afm = make_AFM(path_afm, path_meta=path_meta, sample=sample, cell_filter='filter1', 
                nmads=5, mean_cov_all=25, median_cov_target=20, min_perc_covered_sites=0.75, is_covered_treshold=0)
 a, report = filter_AFM(
     afm, filtering=filtering, 
     filtering_kwargs={'min_median_af':.01, 'af_confident_detection': .02, 'min_n_confidently_detected':2, 'min_n_positive':5, 'min_mean_AD_in_confident':1.5 },
     max_AD_counts=2, min_cell_number=10,
-    # lineage_column='GBC', compute_enrichment=True, spatial_metrics=True,
-    binarization_kwargs={'min_AD':2, 't_vanilla':0},
+    lineage_column='GBC', compute_enrichment=True, spatial_metrics=True,
+    bin_method='MI_TO',
+    binarization_kwargs={'min_AD':2, 't_vanilla':0, 'min_cell_prevalence':.2, 't_prob':.75 },
     path_dbSNP=os.path.join(path_data, 'miscellanea', 'dbSNP_MT.txt'),
     path_REDIdb=os.path.join(path_data, 'miscellanea', 'REDIdb_MT.txt'),
 )
@@ -56,9 +57,6 @@ DP = DP.A.T
 
 
 ##
-
-
-report
 
 
 # AUC
@@ -190,15 +188,17 @@ G_vanilla = call_genotypes(AD=AD, DP=DP, bin_method='vanilla', t_vanilla=0.01)
 
 ##
 
-report
-
 mut_profile(a, ref_df=ref_df)
 plt.show()
 
 tree = build_tree(AD=AD, DP=DP, meta=a.obs, var_names=a.var_names, metric='jaccard', solver='UPMGA',
-                      bin_method='vanilla', binarization_kwargs={'t_prob':.75, 't_vanilla':.0, 'min_AD':2})
+                      bin_method='vanilla', binarization_kwargs={'t_prob':.9, 't_vanilla':.0, 'min_AD':2, 'min_cell_prevalence':.2})
 
-tree, mut_nodes, mutation_order =  cut_and_annotate_tree(tree)
+tree, mut_nodes, mutation_order = cut_and_annotate_tree(tree)
+
+tree.cell_meta['MT_clone'].value_counts()
+
+
 
 
 cmaps = {

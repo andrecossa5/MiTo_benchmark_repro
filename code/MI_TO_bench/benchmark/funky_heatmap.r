@@ -5,17 +5,17 @@ library(funkyheatmap)
 
 # data("dynbenchmark_data")
 
-my_table <- read.csv('/Users/IEO5505/Desktop/MI_TO/MI_TO_analysis_repro/results/MI_TO_bench/benchmark/grouped.csv', row.names = 1)
+my_table <- read.csv('/Users/IEO5505/Desktop/MI_TO/MI_TO_analysis_repro/results/MI_TO_bench/phylo_inference/grouped.csv', row.names = 1)
 my_table <- my_table %>% add_column(id = c(1:5,66:70) %>% as.character, .before = 1)
 
 col.names <- c(
   "", "Preprocessing", "Binarization", "Min confident AF", "Min n ALT", "Min n +cells", 
-  "Mut Quality", "GBC", "Noise robustness", "Connectivity", "Variation", "Yield", "Overall",
-  "Target/untarget ratio", "n dbSNP", "n REDIdb", "Mut signature", 
+  "Mut Quality", "GBC", "Tree structure", "Connectedness", "Variation", "Yield", "Overall",
+  "n dbSNP", "n REDIdb", "Mut signature", 
   "Clonal-biased MT-SNVs", "AUPRC", "ARI", "NMI", 
   "Tree vs MT-SNVs corr", 
   "Density", "Transitivity", "Mean path length", "Average degree", "LLC", 
-  "Aplotype redundancy", 
+  "Aplotype redundancy", 'n MT-SNVs',
   "Median n MT-SNVs (cell)", "n GBC clones", "n cells"
 )
 
@@ -23,18 +23,18 @@ geoms <- c(rep("text",6), rep("bar", 7), rep("funkyrect", 18))
 
 palettes <- c(
   rep(NA,6), 
-  "Mutation Quality", "Association with GBC", "Noise robustness","Connectivity", "Var", "Yield", "Overall", 
-  rep( "Mutation Quality", 4),
+  "Mutation Quality", "Association with GBC", "Tree Structure","Connectedness", "Var", "Yield", "Overall", 
+  rep( "Mutation Quality", 3),
   rep("Association with GBC",4),
-  "Noise robustness",
-  rep("Connectivity", 5), 
-  "Var",
+  "Tree Structure",
+  rep("Connectedness", 5), 
+  rep("Var",2),
   rep("Yield", 3)
 )
 
 col.groups <- c(
-  rep("Parameters",6), rep("Summary",7), rep("Mutation Quality", 4), 
-  rep("Association with GBC", 4), "Noise robustness", rep("Connectivity", 5), "Var", rep("Yield", 3)
+  rep("Parameters",6), rep("Summary",7), rep("Mutation Quality", 3), 
+  rep("Association with GBC", 4), "Tree Structure", rep("Connectedness", 5), rep("Var",2), rep("Yield", 3)
 )
 
 column_info <- tibble(
@@ -69,8 +69,8 @@ brown_gradient <- c(
 palettes <- list(
   "Mutation Quality" = "Blues",
   "Association with GBC" = "Reds",
-  "Noise robustness" = "Greens",
-  "Connectivity" = brown_gradient, 
+  "Tree Structure" = "Greens",
+  "Connectedness" = brown_gradient, 
   "Var" = yellow_gradient, 
   "Yield" = purple_gradient,
   "Overall" = "Greys"
@@ -78,7 +78,7 @@ palettes <- list(
 
 col.groups.df <- tibble(
   group=col.groups %>% unique,
-  palette=c("Overall", "Overall", "Mutation Quality", "Association with GBC", "Noise robustness", "Connectivity", "Var", "Yield"),
+  palette=c("Overall", "Overall", "Mutation Quality", "Association with GBC", "Tree Structure", "Connectedness", "Var", "Yield"),
   level1=col.groups %>% unique
 )
 

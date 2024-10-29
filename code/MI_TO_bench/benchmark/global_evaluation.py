@@ -1,5 +1,5 @@
 """
-Benchmarking experiment analysis
+Benchmark of MT-SNVs spaces.
 """
 
 import os
@@ -15,8 +15,8 @@ matplotlib.use('macOSX')
 
 # Get metrics
 path_main = '/Users/IEO5505/Desktop/MI_TO/MI_TO_analysis_repro'
-path_data = os.path.join(path_main, 'results', 'MI_TO_bench', 'phylo_inference')
-path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark')
+path_data = os.path.join(path_main, 'data', 'MI_TO_bench', 'AFMs')
+path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark', 'tuning')
 
 
 ##
@@ -25,22 +25,22 @@ path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark')
 # Set annot
 groupings = ['pp_method', 'bin_method', 'af_confident_detection', 'min_AD', 'min_n_positive']
 metric_annot = {
-    'Mutation Quality' : ['median_target/untarget_coverage_logratio', 'n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio'],
+    'Mutation Quality' : ['n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio'],
     'Association with GBC' : ['freq_lineage_biased_muts',  'AUPRC', 'ARI', 'NMI'],                               
-    'Noise robustness' : ['corr'],
-    'Connectivity' : ['density', 'transitivity', 'average_path_length', 'average_degree', 'proportion_largest_component'],
-    'Variation' : ['genomes_redundancy', 'median_n_vars_per_cell'],                                                           
+    'Tree structure' : ['corr'],
+    'Connectedness' : ['density', 'transitivity', 'average_path_length', 'average_degree', 'proportion_largest_component'],
+    'Variation' : ['genomes_redundancy', 'median_n_vars_per_cell', 'n_vars'],                                                           
     'Yield' : ['n_GBC_groups', 'n_cells']                                                                
 }  
 relevant_metrics = list(chain.from_iterable([ metric_annot[k] for k in metric_annot ]))
 relevant_metrics = [ f'{x}_rescaled' for x in relevant_metrics ]
 weights = {
-    'Mutation Quality': 0.1,
-    'Association with GBC': 0.5,
-    'Noise robustness' : .3,
-    'Connectivity' : .0,
-    'Variation' : .0,
-    'Yield' : .2
+    'Mutation Quality': .1,
+    'Association with GBC': .4,
+    'Tree structure' : .2,
+    'Connectedness' : .0,
+    'Variation' : 0,
+    'Yield' : .3
 }
 
 
@@ -48,11 +48,17 @@ weights = {
 
 
 # Extract
-df, metrics, options = format_results(path_data)
-df.to_csv(os.path.join(path_results, 'main_benchmarking_df.csv'))
+# df, metrics, options = format_results(path_data)
+df = pd.read_csv(os.path.join(path_results, 'main_df.csv'), index_col=0)
+metrics = pd.read_csv(os.path.join(path_results, 'metrics.csv'), header=None).iloc[:,0].to_list()
+metrics = [ x for x in metrics if x != 'median_target/untarget_coverage_logratio']
+options = pd.read_csv(os.path.join(path_results, 'options.csv'), header=None).iloc[:,0].to_list()
+options += ['pp_method']
+df = df.drop(columns=['median_target/untarget_coverage_logratio'])
 
 # One sample/task
-df = df.query('sample=="MDA_lung"')
+sample = 'MDA_PT'
+df = df.query('sample==@sample')
 
 # Score and rank, single task
 n = 5
@@ -60,28 +66,51 @@ df_ranked = rank_items(df, groupings, metrics, weights, metric_annot)
 df_final = pd.concat([df_ranked.head(n), df_ranked.tail(n)])
 metric_type_scores = df_final.columns[df_final.columns.str.contains('score')].to_list()
 df_final[groupings+metric_type_scores+relevant_metrics].to_csv(os.path.join(path_results, 'grouped.csv'))
-# df_final[groupings+metric_type_scores+relevant_metrics].columns
+df_final[['ARI', 'NMI', 'AUPRC', 'corr', 'n_cells', 'n_vars', 'n_GBC_groups']]
 
 # Options of interests
-n_top = 5
-df_ranked = rank_items(df, 'job_id', metrics, weights, metric_annot)
-df_final = pd.concat([df_ranked.head(n), df_ranked.tail(n)])
-df_final = df_final.merge(df[['job_id']+options.to_list()], on='job_id')
-metric_type_scores = df_final.columns[df_final.columns.str.contains('score')].to_list()
-df_final[groupings+metric_type_scores].to_csv(os.path.join(path_results, 'single_jobs.csv'))
+df_selected = (
+    df.query('AUPRC>.5 and corr>.6 and n_cells>1000 and n_GBC_groups>8 and n_vars>10')
+    [['job_id', 'pp_method', 'bin_method', 'af_confident_detection', 'min_AD', 'ARI', 'NMI', 'corr', 'AUPRC', 'freq_lineage_biased_muts', 'n_cells', 'n_vars', 'n_GBC_groups']]
+)
 
-# df_final.iloc[0,:][options]
+df_selected['cat'] = pd.cut(df_selected['n_vars'], bins=5)
+df_selected = df_selected.groupby('cat').apply(lambda x: x.sort_values('corr', ascending=False).head(2)).reset_index(drop=True)
+
+# Write out
+L = []
+for i in range(df_selected.shape[0]):
+    l = [sample, os.path.join(path_data, df_selected['pp_method'].values[i], sample, 'afm.h5ad'), df_selected['job_id'].values[i], "None"]
+    L.append(l)
+
+pd.DataFrame(L, columns=['sample', 'ch_matrix', 'job_id', 'cell_file']).set_index('sample').to_csv(os.path.join(path_results, f'{sample}_jobs.csv'))
 
 
 ##
 
+# FILTER USED!!
+# MDA_clones: df.query('AUPRC>.5 and corr>.6 and n_cells>300 and n_GBC_groups==7 and n_vars>10')
+# MDA_PT: df.query('AUPRC>.3 and corr>.5 and n_cells>1000 and n_GBC_groups>30 and n_vars>10')
+# MDA_lung: df.query('AUPRC>.5 and corr>.6 and n_cells>1000 and n_GBC_groups>8 and n_vars>10')
 
-# Viz option impact single metrics
+# ORIGINAL
+# weights = {
+#     'Mutation Quality': .1,
+#     'Association with GBC': .4,
+#     'Tree structure' : .2,
+#     'Connectedness' : .0,
+#     'Variation' : .0,
+#     'Yield' : .3
+# }
+# NOW
+# weights = {
+#     'Mutation Quality': .1,
+#     'Association with GBC': .5,
+#     'Tree structure' : .1,
+#     'Connectedness' : .0,
+#     'Variation' : 0,
+#     'Yield' : .3
+# }
 
 
-
-
-
-
-
-
+##

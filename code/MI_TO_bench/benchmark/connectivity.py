@@ -15,34 +15,36 @@ matplotlib.use('macOSX')
 
 # Get metrics
 path_main = '/Users/IEO5505/Desktop/MI_TO/MI_TO_analysis_repro'
-path_data = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark', 'tuning')
+path_data = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark', 'tuning', 'last_run_for_thesis')
 path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark')
 
 # Main metrics and options df
 # df, metrics, options = format_results(path_data)
-df = pd.read_csv(os.path.join(path_data, 'main_df.csv'), index_col=0)
+df = pd.read_csv(os.path.join(path_data, 'tuning_df.csv'), index_col=0)
 metrics = pd.read_csv(os.path.join(path_data, 'metrics.csv')).iloc[:,0].to_list()
 metrics = [ x for x in metrics if x != 'median_target/untarget_coverage_logratio']
 options = pd.read_csv(os.path.join(path_data, 'options.csv')).iloc[:,0].to_list()
 
 # Overall
+groupings = ['pp_method', 'bin_method', 'af_confident_detection', 'min_n_confidently_detected', 'min_AD']
+metric_annot = {
+    'Mutation Quality' : ['n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio'],
+    'Association with GBC' : ['freq_lineage_biased_muts', 'AUPRC', 'ARI', 'NMI'],                               
+    'Tree structure' : ['corr', 'mean_CI'],
+    'Connectedness' : ['density', 'transitivity', 'average_path_length', 'average_degree', 'proportion_largest_component'],
+    'Variation' : ['genomes_redundancy', 'median_n_vars_per_cell'],                                                           
+    'Yield' : ['n_GBC_groups', 'n_cells', 'n_vars']                                                                
+}  
 weights = {
     'Mutation Quality': .1,
     'Association with GBC': .4,
-    'Tree structure' : .2,
+    'Tree structure' : .1,
     'Connectedness' : .0,
-    'Variation' : .0,
-    'Yield' : .3
+    'Variation' : 0,
+    'Yield' : .4
 }
-metric_annot = {
-    'Mutation Quality' : ['n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio'],
-    'Association with GBC' : ['freq_lineage_biased_muts',  'AUPRC', 'ARI', 'NMI'],                               
-    'Tree structure' : ['corr'],
-    'Connectedness' : ['density', 'transitivity', 'average_path_length', 'average_degree', 'proportion_largest_component'],
-    'Variation' : ['genomes_redundancy', 'median_n_vars_per_cell', 'n_vars'],                                                           
-    'Yield' : ['n_GBC_groups', 'n_cells']                                                                
-}  
-groupings = ['pp_method', 'bin_method', 'af_confident_detection', 'min_AD', 'min_n_positive']
+
+
 
 df_ = rank_items(df, groupings, metrics, weights, metric_annot)
 df_.columns
@@ -64,9 +66,12 @@ metric_names_ = {
 }
 
 
+
+
 fig, axs = plt.subplots(1,5,figsize=(12,3), sharey=True)
 
 for i,metric in enumerate(metrics_):
+    name = metric_names_[metric] if metric in metric_names_ else metric
     ax = axs.ravel()[i]
     sns.regplot(df_[metric], df_['Association with GBC score'], ax=ax, scatter=False)
     ax.plot(df_[metric], df_['Association with GBC score'], color='lightgrey', 
@@ -77,7 +82,7 @@ for i,metric in enumerate(metrics_):
     format_ax(ax=ax, xlabel=name, ylabel=ylabel, title=f'Pearson\'s r: {corr:.2f}', reduced_spines=True)
 
 fig.tight_layout()
-fig.savefig(os.path.join(path_results, 'connectivity_vs_GBC.png'), dpi=500)
+fig.savefig(os.path.join(path_results, 'connectivity_vs_GBC.pdf'))
 
 
 ##
@@ -113,22 +118,21 @@ for i,(metric,col) in enumerate(list(product(GBC_cols, columns_))):
     format_ax(ax=ax, xlabel=name, ylabel=metric, reduced_spines=True)
 
 fig.tight_layout()
-fig.savefig(os.path.join(path_results, 'key_options_vs_GBC.png'), dpi=500)
+fig.savefig(os.path.join(path_results, 'key_options_vs_GBC.pdf'))
 
 
 ##
 
 
 # More on AF confident detection
-metric = 'NMI'
-df_agg = df.groupby(['sample', 'af_confident_detection']).apply(lambda x: x[[metric, 'n_cells']].median()).reset_index()# .query('sample=="MDA_clones"')
-
+metrics = ['ARI', 'NMI', 'AUPRC']
 
 # Create a figure and a set of subplots with shared x-axis
-fig, axs = plt.subplots(1,3,figsize=(12,3.5))
+fig, axs = plt.subplots(3,3,figsize=(10.2,8.5))
 
-for i,sample in enumerate(['MDA_clones', 'MDA_PT', 'MDA_lung']):
+for i,(metric,sample) in enumerate(product(metrics, ['MDA_clones', 'MDA_PT', 'MDA_lung'])):
 
+    df_agg = df.groupby(['sample', 'af_confident_detection']).apply(lambda x: x[[metric, 'n_cells']].median()).reset_index()# .query('sample=="MDA_clones"')
     df_ = df_agg.query('sample==@sample')
     ax = axs.ravel()[i]
     ax.plot(df_['af_confident_detection'], df_[metric], 'bo--', label='NMI')
@@ -143,7 +147,8 @@ for i,sample in enumerate(['MDA_clones', 'MDA_PT', 'MDA_lung']):
     ax_.tick_params(axis='y', labelcolor='g')
 
 fig.tight_layout()
-fig.savefig(os.path.join(path_results, f'AF_{metric}.png'), dpi=500)
+# plt.show()
+fig.savefig(os.path.join(path_results, f'GBC_metrics_AF.pdf'))
 
 
 

@@ -60,9 +60,9 @@ afm
 # Filter cells
 afm = filter_cells(afm, cell_filter='filter2')
 afm = filter_afm(afm, 
-    filtering='MI_TO', 
-    filtering_kwargs={'af_confident_detection':.03, 'min_n_confidently_detected':2, 'min_mean_AD_in_positives':1.25},
-    bin_method='MI_TO', 
+    filtering='MiTo', 
+    filtering_kwargs={'af_confident_detection':.02, 'min_n_confidently_detected':2, 'min_mean_AD_in_positives':1.25},
+    bin_method='MiTo', 
     binarization_kwargs={'min_AD':2, 't_prob':.75, 'min_cell_prevalence':.1},
     max_AD_counts=2,
     lineage_column='GBC',
@@ -74,10 +74,16 @@ afm = filter_afm(afm,
 
 ##
 
+tree = build_tree(afm, solver='UPMGA')
+fig, ax = plt.subplots(figsize=(5,5))
+plot_tree(tree, ax=ax, features=['Origin', 'GBC'], colorstrip_width=15)
+fig.tight_layout()
+plt.show()
 
 # Cell states
 tree.cell_meta.columns
 tree.cell_meta.groupby('Origin')['GBC'].nunique()
+
 
 ##
 

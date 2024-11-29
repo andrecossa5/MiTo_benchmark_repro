@@ -8,6 +8,7 @@ from mito_utils.utils import *
 from mito_utils.preprocessing import *
 from mito_utils.plotting_base import *
 matplotlib.use('macOSX')
+set_rcParams()
 
 
 ##
@@ -15,13 +16,13 @@ matplotlib.use('macOSX')
 
 # Get metrics
 path_main = '/Users/IEO5505/Desktop/MI_TO/MI_TO_analysis_repro'
-path_data = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark', 'tuning')
+path_data = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark', 'tuning', 'last_run_for_thesis')
 path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark')
 
 # Main metrics and options df
 # df, metrics, options = format_results(path_data)
-df = pd.read_csv(os.path.join(path_data, 'main_df.csv'), index_col=0)
-metrics = pd.read_csv(os.path.join(path_data, 'metrics.csv'), header=None).iloc[:,0].to_list()
+df = pd.read_csv(os.path.join(path_data, 'tuning_df.csv'), index_col=0)
+metrics = pd.read_csv(os.path.join(path_data, 'metrics.csv')).iloc[:,0].to_list()
 metrics = [ x for x in metrics if x != 'median_target/untarget_coverage_logratio']
 options = pd.read_csv(os.path.join(path_data, 'options.csv'), header=None).iloc[:,0].to_list()
 df = df.drop(columns=['median_target/untarget_coverage_logratio', 'cell_subset', 'cell_filter'])
@@ -45,17 +46,16 @@ for x in X.columns:
 
 # Select test metrics
 metric_tests = [
-    'AUPRC', 'ARI', 'NMI', 'freq_lineage_biased_muts', 
-    'n_cells', 'median_n_vars_per_cell', 'density', 'transitions_vs_transversions_ratio'
+    'AUPRC', 'ARI', 'NMI', 'freq_lineage_biased_muts', 'mean_CI', 'corr',
+    'n_cells', 'median_n_vars_per_cell'
 ]
 names = {
     'freq_lineage_biased_muts' : "% lineage-biased \n MT-SNVs",
     'n_cells' : 'n cells',
     'median_n_vars_per_cell' : 'n MT-SNVs per cell',
-    'density' : 'AFM density',
-    'transitions_vs_transversions_ratio' : 'n transitions / \n n transversions'
+    'mean_CI' : 'CI',
+    'corr' : 'Tree-char dists correlation'
 }
-
 
 # Here we go
 fig, axs = plt.subplots(2,4,figsize=(14,6))
@@ -82,31 +82,30 @@ for i, metric in enumerate(metric_tests):
     format_ax(ax=ax, title=title, reduced_spines=True, xlabel='Feature importance')
 
 fig.tight_layout()
-fig.savefig(os.path.join(path_results, 'feature_importance_meta_analysis.png'), dpi=500)
+fig.savefig(os.path.join(path_results, 'feature_importance_meta_analysis.pdf'))
 
 
 ##
 
 
 # Overall
+groupings = ['pp_method', 'bin_method', 'af_confident_detection', 'min_n_confidently_detected', 'min_AD']
+metric_annot = {
+    'Mutation Quality' : ['n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio'],
+    'Association with GBC' : ['freq_lineage_biased_muts', 'AUPRC', 'ARI', 'NMI'],                               
+    'Tree structure' : ['corr', 'mean_CI'],
+    'Connectedness' : ['density', 'transitivity', 'average_path_length', 'average_degree', 'proportion_largest_component'],
+    'Variation' : ['genomes_redundancy', 'median_n_vars_per_cell'],                                                           
+    'Yield' : ['n_GBC_groups', 'n_cells', 'n_vars']                                                                
+}
 weights = {
     'Mutation Quality': .1,
     'Association with GBC': .4,
-    'Tree structure' : .2,
+    'Tree structure' : .1,
     'Connectedness' : .0,
-    'Variation' : .0,
-    'Yield' : .3
+    'Variation' : 0,
+    'Yield' : .4
 }
-metric_annot = {
-    'Mutation Quality' : ['n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio'],
-    'Association with GBC' : ['freq_lineage_biased_muts',  'AUPRC', 'ARI', 'NMI'],                               
-    'Tree structure' : ['corr'],
-    'Connectedness' : ['density', 'transitivity', 'average_path_length', 'average_degree', 'proportion_largest_component'],
-    'Variation' : ['genomes_redundancy', 'median_n_vars_per_cell', 'n_vars'],                                                           
-    'Yield' : ['n_GBC_groups', 'n_cells']                                                                
-}  
-groupings = ['pp_method', 'bin_method', 'af_confident_detection', 'min_AD', 'min_n_positive']
-
 df_ = rank_items(df, groupings, metrics, weights, metric_annot)
 df_.columns
 
@@ -116,7 +115,7 @@ df_.columns
 
 # Colors
 pp_method_colors = create_palette(df_, 'pp_method', sc.pl.palettes.vega_10)
-bin_method_colors = { "vanilla" : '#C9D2CD' , "MI_TO" : '#CA5E00'}
+bin_method_colors = { "vanilla" : '#C9D2CD' , "MiTo" : '#CA5E00'}
 
 
 ##
@@ -125,21 +124,21 @@ bin_method_colors = { "vanilla" : '#C9D2CD' , "MI_TO" : '#CA5E00'}
 fig, ax = plt.subplots(figsize=(4.,4.))
 scatter(df_, x='Association with GBC score', y='Yield score', by='pp_method', c=pp_method_colors, s=100,  ax=ax)
 format_ax(ax=ax, xlabel='Association with GBC score', ylabel='Yield score')
-add_legend(ax=ax, colors=pp_method_colors, loc='upper right', bbox_to_anchor=(1,1), artists_size=8, 
-           label_size=9, ticks_size=8, label='Preprocessing\nmethod')
+add_legend(ax=ax, colors=pp_method_colors, loc='lower left', bbox_to_anchor=(0,0), artists_size=8, 
+           label_size=9, ticks_size=9, label='Preprocessing\nmethod')
 fig.tight_layout()
-fig.savefig(os.path.join(path_results, 'overall_scatter.png'), dpi=500)
+fig.savefig(os.path.join(path_results, 'overall_scatter.pdf'))
 
 
 ##
 
 
-fig, axs = plt.subplots(3,3,figsize=(8,6.5))
+fig, axs = plt.subplots(1,3,figsize=(8,4))
 df_.columns
 metrics_ = [
-    'n_cells', 'n_vars', 'median_n_vars_per_cell',
-    'n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio',
-    'ARI', 'NMI', 'AUPRC'
+    'n_cells', # 'n_vars', 'median_n_vars_per_cell',
+    # 'n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio',
+    'ARI', 'NMI'#, 'AUPRC'
 ]
 metric_names_ = {'transitions_vs_transversions_ratio':'Transitions /\nTransversion', 
                  'median_n_vars_per_cell':'Median n_vars per cell'}
@@ -150,10 +149,10 @@ for i,metric in enumerate(metrics_):
     df_feat = df.groupby(groupings, dropna=False)[metric].median().reset_index()
     name = metric_names_[metric] if metric in metric_names_ else metric
     box(df_feat, x='pp_method', y=metric, ax=ax, c=pp_method_colors, order=order)
-    format_ax(ax=ax,  xticks=[], title=name, reduced_spines=True)
+    format_ax(ax=ax, title=name, rotx=90, reduced_spines=True)
 
 fig.tight_layout()
-fig.savefig(os.path.join(path_results, 'metrics_by_method.png'), dpi=500)
+fig.savefig(os.path.join(path_results, 'metrics_by_method.pdf'))
 
 
 
@@ -166,21 +165,22 @@ format_ax(ax=ax, xlabel='Association with GBC score', ylabel='Yield score')
 add_legend(ax=ax, colors=bin_method_colors, loc='upper right', bbox_to_anchor=(1,1), artists_size=8, 
            label_size=9, ticks_size=8, label='Binarization\nmethod')
 fig.tight_layout()
-fig.savefig(os.path.join(path_results, 'bin_scatter.png'), dpi=500)
+fig.savefig(os.path.join(path_results, 'bin_scatter.pdf'))
 
 
 ##
 
 
-fig, axs = plt.subplots(3,3,figsize=(8,6.5), sharex=True)
+fig, axs = plt.subplots(2,4,figsize=(8.5,6.5), sharex=True)
+
 df_.columns
 metrics_ = [
-    'n_cells', 'n_vars', 'median_n_vars_per_cell',
-    'n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio',
-    'ARI', 'NMI', 'AUPRC'
+    'n_cells', 'n_vars', 'median_n_vars_per_cell', 'corr', 'mean_CI', 'ARI', 'NMI', 'AUPRC'
 ]
 metric_names_ = {'transitions_vs_transversions_ratio':'Transitions /\nTransversion', 
-                 'median_n_vars_per_cell':'Median n_vars per cell'}
+                 'median_n_vars_per_cell':'Median n_vars\nper cell',
+                 'corr':'Tree-char dists\ncorrelation'
+                }
 
 order = df_.groupby('pp_method')['ARI'].mean().sort_values().index
 
@@ -192,7 +192,7 @@ for i,metric in enumerate(metrics_):
     format_ax(ax=ax,  title=name, reduced_spines=True, rotx=90)
 
 fig.tight_layout()
-fig.savefig(os.path.join(path_results, 'metrics_by_bin.png'), dpi=500)
+fig.savefig(os.path.join(path_results, 'metrics_by_bin.pdf'))
 
 
 ##

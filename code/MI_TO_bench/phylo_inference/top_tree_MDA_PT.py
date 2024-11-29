@@ -18,7 +18,7 @@ matplotlib.use('macOSX')
 
 # Set paths
 sample ='MDA_PT'
-job = 'job2'
+job = 'tuning846006294d'
 path_main = '/Users/IEO5505/Desktop/MI_TO/MI_TO_analysis_repro' 
 path_results = os.path.join(path_main, f'results/MI_TO_bench/phylo_inference/final_trees/{sample}/{job}')
 path_afm_raw = os.path.join(path_main, f'data/MI_TO_bench/AFMs/maegatk/{sample}/afm.h5ad')

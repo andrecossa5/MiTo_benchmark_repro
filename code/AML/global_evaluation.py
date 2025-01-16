@@ -57,7 +57,7 @@ options += ['pp_method']
 df = df.drop(columns=['median_target/untarget_coverage_logratio'])
 
 # One sample/task
-sample = 'AML2'
+sample = 'sAML1'
 df = df.query('sample==@sample')
 
 # Explore ...
@@ -77,6 +77,7 @@ df_selected = (
     df.query('corr>.5 and n_cells>1000 and n_vars>10') 
     [['job_id', 'pp_method', 'bin_method', 'af_confident_detection', 'min_AD', 'corr', 'freq_lineage_biased_muts', 'n_cells', 'n_vars', 'mean_CI']]
 )
+df_selected
 df_selected['cat'] = pd.cut(df_selected['n_vars'], bins=5)
 df_selected.groupby('cat').size() 
 df_selected = df_selected.groupby('cat').apply(lambda x: x.sort_values('corr', ascending=False).head(2)).reset_index(drop=True)

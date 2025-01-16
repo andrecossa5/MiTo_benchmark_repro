@@ -1,5 +1,5 @@
 """
-Benchmark of MT-SNVs spaces, for AML samples
+Benchmark of MT-SNVs spaces, for AML samples.
 """
 
 import os
@@ -47,6 +47,19 @@ weights = {
 ##
 
 
+# Extract
+# df, metrics, options = format_results(path_results)
+df = pd.read_csv(os.path.join(path_results, 'df_tuning.csv'), index_col=0)
+metrics = pd.read_csv(os.path.join(path_results, 'metrics.csv')).iloc[:,0].to_list()
+metrics = [ x for x in metrics if x != 'median_target/untarget_coverage_logratio']
+options = pd.read_csv(os.path.join(path_results, 'options.csv')).iloc[:,0].to_list()
+options += ['pp_method']
+df = df.drop(columns=['median_target/untarget_coverage_logratio'])
+
+# One sample/task
+sample = 'AML2'
+df = df.query('sample==@sample')
+
 # Explore ...
 # ...
 
@@ -61,8 +74,8 @@ weights = {
 
 # Options of interests
 df_selected = (
-    df.query('AUPRC>.3 and corr>.5 and n_cells>1000 and n_GBC_groups>30 and n_vars>10') 
-    [['job_id', 'pp_method', 'bin_method', 'af_confident_detection', 'min_AD', 'ARI', 'NMI', 'corr', 'AUPRC', 'freq_lineage_biased_muts', 'n_cells', 'n_vars', 'n_GBC_groups', 'mean_CI']]
+    df.query('corr>.5 and n_cells>1000 and n_vars>10') 
+    [['job_id', 'pp_method', 'bin_method', 'af_confident_detection', 'min_AD', 'corr', 'freq_lineage_biased_muts', 'n_cells', 'n_vars', 'mean_CI']]
 )
 df_selected['cat'] = pd.cut(df_selected['n_vars'], bins=5)
 df_selected.groupby('cat').size() 
@@ -74,8 +87,7 @@ df_selected
 # for i in range(df_selected.shape[0]):
 #     l = [sample, os.path.join(path_data, df_selected['pp_method'].values[i], sample, 'afm.h5ad'), df_selected['job_id'].values[i], "None"]
 #     L.append(l)
-# 
-# pd.DataFrame(L, columns=['sample', 'ch_matrix', 'job_id', 'cell_file']).set_index('sample').to_csv(os.path.join(path_results, f'{sample}_final_jobs.csv'))
+# pd.DataFrame(L, columns=['sample', 'ch_matrix', 'job_id', 'cell_file']).set_index('sample').to_csv(os.path.join(path_results, 'final_jobs.csv'))
 
 
 ##

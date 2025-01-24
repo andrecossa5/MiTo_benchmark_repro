@@ -1,5 +1,5 @@
 """
-Visualizing final AML MT-SNVs spaces and trees.
+Scratch for visualizing final AML MT-SNVs spaces and trees.
 """
 
 import os
@@ -19,7 +19,7 @@ matplotlib.use('macOSX')
 
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MI_TO_analysis_repro' 
-path_results = os.path.join(path_main, f'results/AML/final_trees/')
+path_results = os.path.join(path_main, f'results/AML/test_plot/')
 weng_2024_ref = os.path.join(path_main, 'data/MI_TO_bench/miscellanea/weng2024_mut_spectrum_ref.csv')
 
 
@@ -44,20 +44,20 @@ for sample,job in L:
         tree = pickle.load(f)
 
     # Mut profile
-    ref_df = pd.read_csv(weng_2024_ref, index_col=0)
-    fig = mut_profile(tree.layers['raw'].columns, ref_df=ref_df, figsize=(5,2.5))
-    fig.tight_layout()
-    fig.savefig(os.path.join(path_results, 'mut_profile.png'), dpi=500)
+    # ref_df = pd.read_csv(weng_2024_ref, index_col=0)
+    # fig = mut_profile(tree.layers['raw'].columns, ref_df=ref_df, figsize=(5,2.5))
+    # fig.tight_layout()
+    # fig.savefig(os.path.join(path_results, 'mut_profile.png'), dpi=500)
 
 
     ##
 
 
     # Annotate to get mut_nodes and mutation_order
-    _, mut_nodes, mutation_order = MiToTreeAnnotator(tree)
+    # _, mut_nodes, mutation_order = MiToTreeAnnotator(tree)
     cmaps = {
         'tumor_tme_class_new' : {'tme':'b', 'malignant':'r'},
-        'MT_clone' : create_palette(tree.cell_meta, 'MT_clone', sc.pl.palettes.default_102)
+        # 'MT_clone' : create_palette(tree.cell_meta, 'MT_clone', sc.pl.palettes.default_102)
     }
 
 

@@ -16,7 +16,8 @@ matplotlib.use('macOSX')
 # Get metrics
 path_main = '/Users/IEO5505/Desktop/MI_TO/MI_TO_analysis_repro'
 path_data = os.path.join(path_main, 'data', 'MI_TO_bench', 'AFMs')
-path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark', 'tuning', 'last_run_for_thesis')
+# path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark', 'tuning', 'last_run_for_thesis')
+path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark1')
 
 
 ##
@@ -57,7 +58,7 @@ options += ['pp_method']
 df = df.drop(columns=['median_target/untarget_coverage_logratio'])
 
 # One sample/task
-sample = 'MDA_PT'
+sample = 'AC_AC_PTs_1'
 df = df.query('sample==@sample')
 
 # Explore ...
@@ -74,7 +75,7 @@ df = df.query('sample==@sample')
 
 # Options of interests
 df_selected = (
-    df.query('AUPRC>.3 and corr>.5 and n_cells>1000 and n_GBC_groups>30 and n_vars>10') 
+    df.query('corr>.5 and n_cells>1000 and n_GBC_groups>30 and n_vars>10') 
     [['job_id', 'pp_method', 'bin_method', 'af_confident_detection', 'min_AD', 'ARI', 'NMI', 'corr', 'AUPRC', 'freq_lineage_biased_muts', 'n_cells', 'n_vars', 'n_GBC_groups', 'mean_CI']]
 )
 df_selected['cat'] = pd.cut(df_selected['n_vars'], bins=5)
@@ -94,6 +95,18 @@ df_selected
 ##
 
 
+# ...
+
+
+
+
+
+
+
+
+
+
+#### REMINDERs
 
 # FILTER USED!!, THESIS
 # MDA_clones: df.query('AUPRC>.5 and corr>.6 and n_cells>300 and n_GBC_groups==7 and n_vars>10')    

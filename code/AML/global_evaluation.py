@@ -50,14 +50,14 @@ weights = {
 # Extract
 # df, metrics, options = format_results(path_results)
 df = pd.read_csv(os.path.join(path_results, 'df_tuning.csv'), index_col=0)
-metrics = pd.read_csv(os.path.join(path_results, 'metrics.csv')).iloc[:,0].to_list()
+metrics = pd.read_csv(os.path.join(path_results, 'metrics.csv'), index_col=0).iloc[:,0].to_list()
 metrics = [ x for x in metrics if x != 'median_target/untarget_coverage_logratio']
-options = pd.read_csv(os.path.join(path_results, 'options.csv')).iloc[:,0].to_list()
+options = pd.read_csv(os.path.join(path_results, 'options.csv'), index_col=0).iloc[:,0].to_list()
 options += ['pp_method']
 df = df.drop(columns=['median_target/untarget_coverage_logratio'])
 
 # One sample/task
-sample = 'AML2'
+sample = 'AML5'
 df = df.query('sample==@sample')
 
 # Explore ...
@@ -90,7 +90,7 @@ df_selected
 # for i in range(df_selected.shape[0]):
 #     l = [df_selected['job_id'].values[i], sample, os.path.join(path_remote, df_selected['pp_method'].values[i], sample, 'afm.h5ad')]
 #     L.append(l)
-# pd.DataFrame(L, columns=['job_id', 'sample', 'ch_matrix']).set_index('job_id').to_csv(os.path.join(path_results, 'final_jobs.csv'))
+pd.DataFrame(L, columns=['job_id', 'sample', 'ch_matrix']).set_index('job_id').to_csv(os.path.join(path_results, 'final_jobs.csv'))
 
 
 ##

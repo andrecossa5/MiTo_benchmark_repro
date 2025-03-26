@@ -166,3 +166,5 @@ data/
 results/
 scratch/
 *.DS_Store/
+work/
+

@@ -17,7 +17,26 @@ matplotlib.use('macOSX')
 path_main = '/Users/IEO5505/Desktop/MI_TO/MI_TO_analysis_repro'
 path_data = os.path.join(path_main, 'data', 'MI_TO_bench', 'AFMs')
 # path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark', 'tuning', 'last_run_for_thesis')
-path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark_final')
+path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark_final', 'LAST_ALL_TOGETHER', 'tune_mito_maegatk')
+
+# Agg results
+# L = []
+# for x in os.listdir(path_results): 
+#     if os.path.isdir(os.path.join(path_results, x)):
+#         os.listdir(os.path.join(path_results, x))
+#         df = pd.read_csv(os.path.join(path_results, x, 'all_options_final.csv'), index_col=0)
+#     L.append(df)
+# df = pd.concat(L)
+# df.to_csv(os.path.join(path_results,'all_options_final.csv'))
+
+# Agg results
+# L = []
+# for x in os.listdir(path_results): 
+#     df, metrics, options = format_tuning(os.path.join(path_results, x))
+#     L.append(df)
+# df.to_csv(os.path.join(path_results, 'tuning_df.csv'))
+# pd.Series(metrics).to_csv(os.path.join(path_results, 'metrics.csv'), index=False, header=False)
+# pd.Series(options).to_csv(os.path.join(path_results, 'options.csv'), index=False, header=False)
 
 
 ##
@@ -25,54 +44,53 @@ path_results = os.path.join(path_main, 'results', 'MI_TO_bench', 'benchmark_fina
 
 # Set annot
 # groupings = ['pp_method', 'bin_method', 'af_confident_detection', 'min_n_confidently_detected', 'min_AD']
-groupings = 'job_id'
-metric_annot = {
-    'Mutation Quality' : ['n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio'],
-    'Association with GBC' : ['freq_lineage_biased_muts', 'AUPRC', 'ARI', 'NMI'],                               
-    'Tree structure' : ['corr', 'mean_CI'],
-    'Connectedness' : ['density', 'transitivity', 'average_path_length', 'average_degree', 'proportion_largest_component'],
-    'Variation' : ['genomes_redundancy', 'median_n_vars_per_cell'],                                                           
-    'Yield' : ['n_GBC_groups', 'n_cells', 'n_vars']                                                                
-}  
-relevant_metrics = list(chain.from_iterable([ metric_annot[k] for k in metric_annot ]))
-relevant_metrics = [ f'{x}_rescaled' for x in relevant_metrics ]
-weights = {
-    'Mutation Quality': .1,
-    'Association with GBC': .4,
-    'Tree structure' : .1,
-    'Connectedness' : .0,
-    'Variation' : 0,
-    'Yield' : .4
-}
+# groupings = 'job_id'
+# metric_annot = {
+#     'Mutation Quality' : ['n_dbSNP', 'n_REDIdb', 'transitions_vs_transversions_ratio'],
+#     'Association with GBC' : ['freq_lineage_biased_muts', 'AUPRC', 'ARI', 'NMI'],                               
+#     'Tree structure' : ['corr', 'mean_CI'],
+#     'Connectedness' : ['density', 'transitivity', 'average_path_length', 'average_degree', 'proportion_largest_component'],
+#     'Variation' : ['genomes_redundancy', 'median_n_vars_per_cell'],                                                           
+#     'Yield' : ['n_GBC_groups', 'n_cells', 'n_vars']                                                                
+# }  
+# relevant_metrics = list(chain.from_iterable([ metric_annot[k] for k in metric_annot ]))
+# relevant_metrics = [ f'{x}_rescaled' for x in relevant_metrics ]
+# weights = {
+#     'Mutation Quality': .1,
+#     'Association with GBC': .4,
+#     'Tree structure' : .1,
+#     'Connectedness' : .0,
+#     'Variation' : 0,
+#     'Yield' : .4
+# }
 
 
 ##
 
 
 # Extract
-# df, metrics, options = format_results(path_data)
 df = pd.read_csv(os.path.join(path_results, 'tuning_df.csv'), index_col=0)
 metrics = pd.read_csv(os.path.join(path_results, 'metrics.csv')).iloc[:,0].to_list()
 metrics = [ x for x in metrics if x != 'median_target/untarget_coverage_logratio']
 options = pd.read_csv(os.path.join(path_results, 'options.csv')).iloc[:,0].to_list()
 options += ['pp_method']
 df = df.drop(columns=['median_target/untarget_coverage_logratio'])
+df = df.query('bin_method!="MiTo_smooth"')
 
 # Explore
-df.groupby('sample')[['corr', 'n_cells', 'n_GBC_groups', 'n_vars', 'ARI', 'NMI']].describe().T
+df.groupby(['sample', 'metric'])[['corr', 'n_cells', 'n_GBC_groups', 'n_vars', 'ARI', 'NMI']].median()
+
+##
 
 # One sample/task
-sample = 'MDA_lung'
+sample = 'MDA_clones'
 df = df.query('sample==@sample')
 df['perc_unassigned'] = df['unassigned'] / df['n_cells']
 df['delta_GBC_groups'] = np.abs(df['n_GBC_groups'] - df['n MiTo clone'])
 (
-    df.query('n_cells>=1000 and n_GBC_groups>=9 and n_vars>10')
+    df.query('n_cells>=250 and n_GBC_groups>=6 and n_vars>10')
     [['ARI', 'corr', 'NMI', 'AUPRC', 'n_cells', 'n_vars', 'n_GBC_groups', 'n MiTo clone', 'perc_unassigned', 'delta_GBC_groups']]
 )
-
-# df.sort_values('ARI', ascending=False).head(50)[['ARI', 'corr', 'NMI', 'AUPRC', 'n_cells', 'n_vars']]
-# df.query('AUPRC>.25 and corr>.25 and n_cells>=850 and n_GBC_groups>=9 and n_vars>10')[['ARI', 'corr', 'NMI', 'AUPRC', 'n_cells', 'n_vars']]
 
 # Score and rank, single task
 # n = 5
@@ -85,27 +103,33 @@ df['delta_GBC_groups'] = np.abs(df['n_GBC_groups'] - df['n MiTo clone'])
 
 # Options of interests
 df_selected = (
-    df.query('n_cells>=1000 and n_GBC_groups>=9 and n_vars>10')
+    df.query('n_cells>=250 and n_GBC_groups>=6 and n_vars>10')
     [[
-        'job_id', 'pp_method', 'bin_method', 'af_confident_detection',
+        'job_id', 'pp_method', 'bin_method', 'af_confident_detection', 'min_cell_number', 'metric',
         'ARI', 'corr', 'NMI', 'AUPRC', 'n_cells', 'n_vars', 'n_GBC_groups', 'n MiTo clone', 'perc_unassigned', 'delta_GBC_groups'
     ]]
-    .sort_values('ARI', ascending=False)
-    .head(5)
 )
-
-# df_selected['cat'] = pd.cut(df_selected['n_vars'], bins=3)
-# df_selected.groupby('cat').size() 
-# df_selected = df_selected.groupby('cat').apply(lambda x: x.sort_values('ARI', ascending=False).head(2)).reset_index(drop=True)
-# df_selected[['NMI', 'ARI']].describe()
+# Bin
+df_selected['n_vars'].describe()
+bins = [0,20,30,df_selected['n_vars'].max()] # Sample specific
+df_selected['cut'] = pd.cut(df_selected['n_vars'], bins=bins)
+df_selected['cut'].value_counts()
+# Select
+df_selected = df_selected.groupby('cut').apply(lambda x: x.sort_values('ARI', ascending=False).head(5))[[
+    'job_id', 'pp_method', 'bin_method', 'metric', 'af_confident_detection', 'min_cell_number',
+    'ARI', 'corr', 'NMI', 'AUPRC', 'n_cells', 'n_vars', 'n_GBC_groups', 'n MiTo clone', 'perc_unassigned', 'delta_GBC_groups'
+]]
+# Drop duplicates
+df_selected_ = df_selected[['n_cells', 'n_vars', 'perc_unassigned', 'n MiTo clone', 'n_GBC_groups']].drop_duplicates()
+df_selected = df_selected.loc[df_selected_.index]
+df_selected.shape
 
 # Write out
 path_ = '/data/cossa2_dare/MI_TO_bench/data/AFMs'
-# L = []
+L = []
 for i in range(df_selected.shape[0]):
     l = [df_selected['job_id'].values[i], sample, os.path.join(path_, df_selected['pp_method'].values[i], sample, 'afm.h5ad')]
     L.append(l)
-
 (
     pd.DataFrame(L, columns=['job_id', 'sample', 'ch_matrix'])
     .set_index('job_id')
@@ -115,7 +139,12 @@ for i in range(df_selected.shape[0]):
 ##
 
 
-# ...
+# MDA_clones
+# bins = [0,20,30,df_selected['n_vars'].max()]
+# MDA_PT
+# bins = [0,45,75,df_selected['n_vars'].max()]
+# MDA_lung
+# bins = [0,20,30,df_selected['n_vars'].max()]
 
 
 

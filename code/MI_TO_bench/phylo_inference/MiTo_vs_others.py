@@ -42,6 +42,10 @@ for folder, sub, files in os.walk(path_data):
             res['method'] = list(d.keys())
             bench_results.append(pd.DataFrame(res))
 
+
+##
+
+
 # MiTo metrics           
 df_metrics = (
     pd.concat(tree_metrics)
@@ -68,13 +72,22 @@ colors = { k:v for k,v in zip(order, sc.pl.palettes.vega_10_scanpy) }
 
 sns.stripplot(data=df_bench, x='sample', y='ARI', palette=colors.values(), 
               hue='method', hue_order=order, size=5, ax=axs[0], dodge=True, edgecolor='k', linewidth=.5)
+sns.barplot(data=df_bench, x='sample', y='ARI', palette=colors.values(), 
+            hue='method', hue_order=order, ax=axs[0], dodge=True)
 axs[0].get_legend().remove()
+axs[0].set_ylim((-.01,1))
+axs[0].axhline(.9, linestyle='--', color='k')
 format_ax(ax=axs[0], xlabel='', ylabel='ARI', reduced_spines=True, xlabel_size=10, ylabel_size=10)
 
 sns.stripplot(data=df_bench, x='sample', y='NMI', palette=colors.values(), 
               hue='method', hue_order=order, size=5, ax=axs[1], dodge=True, edgecolor='k', linewidth=.5)
 format_ax(ax=axs[1], xlabel='', ylabel='NMI', reduced_spines=True, xlabel_size=10, ylabel_size=10)
+sns.barplot(data=df_bench, x='sample', y='NMI', palette=colors.values(), 
+            hue='method', hue_order=order, ax=axs[1], dodge=True)
 axs[1].get_legend().remove()
+axs[1].set_ylim((-.01,1))
+axs[1].axhline(.9, linestyle='--', color='k')
+format_ax(ax=axs[1], xlabel='', ylabel='NMI', reduced_spines=True, xlabel_size=10, ylabel_size=10)
 add_legend(ax=axs[1], colors=colors, loc='upper left', bbox_to_anchor=(1,1), artists_size=10, label='Method', label_size=10, ticks_size=10)
 
 fig.subplots_adjust(right=.75, top=.85, left=.15, bottom=.15)
@@ -94,7 +107,7 @@ with open(path_colors, 'rb') as f:
     clone_colors = pickle.load(f)
 
 # Viz
-fig, axs = plt.subplots(3,4,figsize=(12,9))
+fig, axs = plt.subplots(3,5,figsize=(14,9))
 
 for i,sample in enumerate(['MDA_clones', 'MDA_PT', 'MDA_lung']):
 
@@ -104,29 +117,30 @@ for i,sample in enumerate(['MDA_clones', 'MDA_PT', 'MDA_lung']):
 
     with open(os.path.join(path_data, sample, top_3_jobs[sample], 'bench_clonal_recontruction.pickle'), 'rb') as f:
         d = pickle.load(f)
-
-    for method in ['MiTo', 'leiden', 'CClone']:
+    
+    for method in ['MiTo', 'vireoSNP', 'leiden', 'CClone']:
         labels = d[method]['labels']
         afm.obs[method] = labels
         afm.obs[method][afm.obs[method].isna()] = 'unassigned'
+        afm.obs[method] = pd.Categorical(labels)
 
     # Colors
-    n_gt = afm.obs['GBC'].unique().size
+    n_gt = afm.obs['GBC'].cat.categories.size
     palette = list(clone_colors.values())
     gbc_colors,_ = assign_matching_colors(afm.obs, 'GBC', 'MiTo', palette)
     afm.uns['GBC_colors'] = list(gbc_colors.values())
 
     # Plot
-    for ax,method in zip(axs[i,:],['GBC', 'MiTo', 'leiden', 'CClone']):
+    for ax,method in zip(axs[i,:],['GBC', 'MiTo', 'vireoSNP', 'leiden', 'CClone']):
 
         if method == 'GBC':
             colors = gbc_colors
-            title = f'{method}: n clones={n_gt}'
+            title = f'{method}\nn clones={n_gt}'
         else:
             ari = d[method]['ARI']
             n_clones = afm.obs[method].unique().size
             _,colors = assign_matching_colors(afm.obs, 'GBC', method, palette)
-            title = f'{method}: ARI={ari:.2f}, n clones={n_clones}'
+            title = f'{method}\nn clones={n_clones}, ARI={ari:.2f}'
         
         afm.uns[f'{method}_colors'] = list(colors.values())
         sc.pl.embedding(

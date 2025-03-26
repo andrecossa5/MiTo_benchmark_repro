@@ -1,5 +1,5 @@
 """
-Final AML MT-SNVs trees, malignant vs tme definition
+Final AML MT-SNVs trees
 """
 
 import os

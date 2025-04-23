@@ -252,14 +252,22 @@ adata.write(os.path.join(os.path.join(path_data, 'expression.h5ad')))
 adata = sc.read(os.path.join(os.path.join(path_data, 'expression.h5ad')))
 
 # Params
-plu.set_rcParams({'figure.dpi':150})
+plu.set_rcParams({'figure.dpi':500})
+
+# Set colors
+cmaps = {
+    'cell_state':plu.create_palette(adata.obs, 'cell_state', col_list=plu.darjeeling),
+    'sample' : {'MDA_PT':'#00928E', 'MDA_lung':'#DC4C0D'}
+}
 
 # Embeddings
-fig, axs = plt.subplots(1,2,figsize=(5,2.5))
+fig, axs = plt.subplots(1,2,figsize=(4.3,2.2))
 for i,feat in enumerate(['sample', 'cell_state']):
-       sc.pl.umap(adata, color=feat, ax=axs[i], show=False, legend_loc='on data', frameon=False)
+       sc.pl.umap(adata, color=feat, ax=axs[i], show=False, 
+                  palette=cmaps[feat], legend_loc='on data', frameon=False)
 fig.tight_layout()
 fig.savefig(os.path.join(path_figures, 'expression_umap.pdf'))
+
 
 ##
 
@@ -272,8 +280,9 @@ plt.show()
 ##
 
 # Abundance cell states
+plu.set_rcParams({'figure.dpi':150})
 fig, ax = plt.subplots(figsize=(3.5,1.3))
-plu.bb_plot(adata.obs, 'sample', 'cell_state', ax=ax)
+plu.bb_plot(adata.obs, 'sample', 'cell_state', categorical_cmap=cmaps['cell_state'], ax=ax)
 fig.tight_layout()
 plt.show()
 

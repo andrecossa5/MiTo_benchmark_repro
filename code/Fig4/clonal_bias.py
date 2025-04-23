@@ -86,14 +86,17 @@ plt.rcParams.update({'figure.dpi': 150.0})  # Display with macosx
 fig, axs = plt.subplots(2,1,figsize=(5,2.5))
 
 cell_states = tree.cell_meta['cell_state'].value_counts().index.values.to_list()
+
+df_ = pd.crosstab(tree.cell_meta['cell_state'], tree.cell_meta['MiTo clone'], normalize=1).loc[cell_states]
 plu.plot_heatmap(
-    pd.crosstab(tree.cell_meta['cell_state'], tree.cell_meta['MiTo clone'], normalize=1).loc[cell_states], 
-    palette='Blues', ax=axs[0], cluster_cols=True, cluster_rows=False, x_names=False, xlabel='MiTo clones',
+    df_.loc[:,plu.order_from_index(df_)], 
+    palette='Blues', ax=axs[0], x_names=False, xlabel='MiTo clones',
     label='Frequency'
 )
+df_ = pd.crosstab(tree.cell_meta['cell_state'], tree.cell_meta['GBC'], normalize=1).loc[cell_states]
 plu.plot_heatmap(
-    pd.crosstab(tree.cell_meta['cell_state'], tree.cell_meta['GBC'], normalize=1).loc[cell_states], 
-    palette='Blues', ax=axs[1], cluster_cols=True, cluster_rows=False, x_names=False, xlabel='GBC clones',
+    df_.loc[:,plu.order_from_index(df_)], 
+    palette='Blues', ax=axs[1], x_names=False, xlabel='GBC clones',
     label='Frequency'
 )
 
@@ -199,15 +202,14 @@ plu.set_rcParams()
 plt.rcParams.update({'figure.dpi': 150.0})  # Display with macosx
 
 # Frequencies
-fig, axs = plt.subplots(1,2,figsize=(4.5,2.5))
+fig, axs = plt.subplots(1,2,figsize=(5,2.5))
 
-plu.plot_heatmap(mt_tr, palette='inferno', ax=axs[0], x_names=True, y_names=True, label='p')
+plu.plot_heatmap(mt_tr, palette='Spectral_r', ax=axs[0], x_names=True, y_names=True, label='p')
 axs[0].set(title='MT-based')
-plu.plot_heatmap(gbc_tr, palette='inferno', ax=axs[1], x_names=True, y_names=False, label='p')
+plu.plot_heatmap(gbc_tr, palette='Spectral_r', ax=axs[1], x_names=True, y_names=False, label='p')
 axs[1].set(title='GBC-based')
 
 fig.tight_layout()
-
 fig.savefig(os.path.join(path_figures, 'cell_transitions.pdf'))
 
 

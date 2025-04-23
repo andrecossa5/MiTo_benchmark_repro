@@ -79,34 +79,35 @@ with open(os.path.join(path_data, 'annotated_tree.pickle'), 'rb') as f:
 plu.set_rcParams()
 plt.rcParams.update({'figure.dpi': 150.0})  # Display with macosx
 
-fig, ax = plt.subplots(figsize=(3.5,3.5))
-mt.pl.heatmap_distances(afm, tree=tree, ax=ax)
-fig.tight_layout()
-plt.show()
+# fig, ax = plt.subplots(figsize=(3.5,3.5))
+# mt.pl.heatmap_distances(afm, tree=tree, ax=ax)
+# fig.tight_layout()
+# plt.show()
+# 
+# fig, ax = plt.subplots(figsize=(3.5,3.5))
+# mt.pl.heatmap_variants(afm, tree=tree, ax=ax, kwargs={'x_names_size':3}, cmap='afmhot_r')
+# fig.tight_layout()
+# plt.show()
 
-fig, ax = plt.subplots(figsize=(3.5,3.5))
-mt.pl.heatmap_variants(afm, tree=tree, ax=ax, kwargs={'x_names_size':3}, cmap='afmhot_r')
-fig.tight_layout()
-plt.show()
+
+##
+
 
 fig, ax = plt.subplots(figsize=(6.5,5.5))
 cmaps = {
-    'GBC':plu.create_palette(tree.cell_meta, 'GBC', sc.pl.palettes.default_102),
     'MiTo clone':plu.create_palette(tree.cell_meta, 'MiTo clone', sc.pl.palettes.default_102),
-    'cell_state':plu.create_palette(tree.cell_meta, 'cell_state', sc.pl.palettes.vega_10_scanpy),
-    'sample' : plu.create_palette(tree.cell_meta, 'sample', 
-                                  order=['MDA_PT', 'MDA_lung'], palette=sc.pl.palettes.vega_10_scanpy)
+    'cell_state':plu.create_palette(tree.cell_meta, 'cell_state', col_list=plu.darjeeling),
+    'sample' : {'MDA_PT':'#00928E', 'MDA_lung':'#DC4C0D'}
 }
 tree.cell_meta['MiTo clone'] = pd.Categorical(tree.cell_meta['MiTo clone'])
 mt.pl.plot_tree(
     tree, ax=ax, 
-    features=['GBC', 'MiTo clone', 'cell_state', 'sample', 'fitness'], 
+    features=['MiTo clone', 'cell_state', 'sample'], 
     orient='down',
     categorical_cmaps=cmaps, 
-    continuous_cmaps={'fitness':'viridis'},
-    colorstrip_width=4,
+    colorstrip_width=6,
     label_offset=5,
-    label_size=8,
+    label_size=10,
     feature_internal_nodes='support',
     cmap_internal_nodes='Spectral_r',
     internal_node_subset=tree.cell_meta['lca'].value_counts().index,
@@ -114,16 +115,11 @@ mt.pl.plot_tree(
     vmin_internal_nodes=.5, vmax_internal_nodes=.8
 )
 tree_stats = mt.tl.get_internal_node_stats(tree)
+plu.add_cbar(tree_stats['support'], palette='Spectral_r', ax=ax, vmin=.5, vmax=.8,
+             layout=( (.75,1,.2,.015), 'top', 'horizontal' ), label='Support', ticks_size=5)
 
-plu.add_cbar(tree_stats['support'], palette='Spectral_r', ax=ax, 
-             layout=( (1.05,.8,.25,.02), 'top', 'horizontal' ), label='Support', ticks_size=5)
-plu.add_cbar(tree.cell_meta['fitness'], palette='viridis', ax=ax, 
-             layout=( (1.05,.6,.25,.02), 'top', 'horizontal' ), label='Fitness', ticks_size=5)
-
-fig.subplots_adjust(left=.2, right=.65, bottom=.2, top=.85)
-fig.savefig(os.path.join(path_figures, 'tree.pdf'))
-
+fig.subplots_adjust(left=.2, right=.9, bottom=.1, top=.85)
+fig.savefig(os.path.join(path_figures, 'tree.png'), dpi=1000)
+ 
 
 ##
-
-

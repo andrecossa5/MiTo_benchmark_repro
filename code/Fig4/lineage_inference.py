@@ -77,7 +77,6 @@ with open(os.path.join(path_data, 'annotated_tree.pickle'), 'rb') as f:
 
 # Params
 plu.set_rcParams()
-plt.rcParams.update({'figure.dpi': 150.0})  # Display with macosx
 
 # fig, ax = plt.subplots(figsize=(3.5,3.5))
 # mt.pl.heatmap_distances(afm, tree=tree, ax=ax)
@@ -114,12 +113,17 @@ mt.pl.plot_tree(
     internal_node_kwargs={'markersize':5},
     vmin_internal_nodes=.5, vmax_internal_nodes=.8
 )
-tree_stats = mt.tl.get_internal_node_stats(tree)
+tree_stats = mt.ut.get_internal_node_stats(tree)
 plu.add_cbar(tree_stats['support'], palette='Spectral_r', ax=ax, vmin=.5, vmax=.8,
              layout=( (.75,1,.2,.015), 'top', 'horizontal' ), label='Support', ticks_size=5)
 
 fig.subplots_adjust(left=.2, right=.9, bottom=.1, top=.85)
-fig.savefig(os.path.join(path_figures, 'tree.png'), dpi=1000)
+plu.save_best_pdf_quality(
+    fig, 
+    figsize=(6.5,5.5),
+    path=path_figures,
+    name='tree.pdf'
+)
  
 
 ##

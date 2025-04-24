@@ -234,11 +234,11 @@ df_plot = (
 
 fig, ax = plt.subplots(figsize=(3.5,2))
 plu.dotplot(df_plot, x='variable', y='top_clones', order_y=['top', 'others'],
-            color='mean_expr', size='freq_positive', palette='afmhot_r', ax=ax)
+            color='mean_expr', size='freq_positive', palette='viridis', ax=ax)
 ax.margins(x=0.1, y=0.5)
 plu.format_ax(ax=ax, xlabel='', ylabel='', rotx=90)
 ax.get_legend().set_visible(False)
-plu.add_cbar(x=df_plot['mean_expr'], palette='afmhot_r', ax=ax, label='Gene expression', 
+plu.add_cbar(x=df_plot['mean_expr'], palette='viridis', ax=ax, label='Gene expression', 
              layout=( (-0.2,1.5,.6,.2), 'top', 'horizontal' ))
 fig.subplots_adjust(left=.35, right=.65, top=.6, bottom=.45)
 fig.savefig(os.path.join(path_figures, 'dotplot_genes_fitness.pdf'))
@@ -263,7 +263,7 @@ plu.add_legend(
 )
 sc.pl.umap(
     adata, color='6_genes', ax=axs[1], 
-    cmap='afmhot_r',
+    cmap='viridis',
     show=False, colorbar_loc=None, 
     frameon=False, 
     title='6-genes',
@@ -271,7 +271,7 @@ sc.pl.umap(
 )
 plu.add_cbar(
     x=adata.obs['6_genes'], 
-    palette='afmhot_r',
+    palette='viridis',
     ax=axs[1],
     label_size=5, 
     ticks_size=5,

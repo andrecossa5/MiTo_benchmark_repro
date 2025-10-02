@@ -1,5 +1,5 @@
 """
-Bench pp_method
+Bench pp_method.
 """
 
 import os
@@ -20,7 +20,7 @@ matplotlib.use('macOSX')
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
 path_data = os.path.join(path_main, 'data', 'bench', 'tune_pp_method')
-# path_figures = os.path.join(path_main, 'results', 'figures', 'Fig2')
+path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
 # path_results = os.path.join(path_main, 'results', 'others', 'Fig2')
 
 
@@ -53,7 +53,7 @@ metrics_of_interest += [
 
 # Params
 plu.set_rcParams()
-matplotlib.rcParams.update({'figure.dpi':150})
+matplotlib.rcParams.update({'figure.dpi':350})
 
 # (
 #     df.groupby(['sample', 'combo'])[metrics_of_interest]
@@ -92,7 +92,7 @@ for i,metric in enumerate(metrics_of_interest):
                        ax=ax, bbox_to_anchor=(1,0.3), loc='upper left')
 
 fig.subplots_adjust(top=.90, bottom=.25, right=.82, left=.05, wspace=.8)
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_fig_7.pdf'))
 
 
 ##
@@ -133,7 +133,7 @@ plu.format_ax(ax=axs[1], xlabel='', ylabel='NMI', reduced_spines=True, rotx=90)
 plu.add_legend(cmap, label='Preprocessing-\nMT-SNVs filtering\ncombination', ax=axs[1])
 
 fig.subplots_adjust(top=.90, bottom=.3, right=.7, left=.1, wspace=.35)
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_8.pdf'))
 
 
 ##
@@ -208,27 +208,16 @@ df_maegatk = get_metrics(os.path.join(path_data, 'mock_maegatk')).query('cell in
 # Basecalls
 afm_mito_prep = sc.read(os.path.join(path_data, 'mito_preprocessing', 'afm.h5ad'))
 afm_mito_prep = afm_mito_prep[[ f'{x}_MDA_clones' for x in subset],:].copy()
-mito_prep_var_basecalls_per_cell = (afm_mito_prep.layers['AD'].A>0).sum(axis=1)
+mito_prep_var_basecalls_per_cell = (afm_mito_prep.layers['AD'].toarray()>0).sum(axis=1)
 afm_maegatk = sc.read(os.path.join(path_data, 'mock_maegatk', 'afm.h5ad'))
 afm_maegatk = afm_maegatk[[ f'{x}_MDA_clones' for x in subset],:].copy()
-maegatk_var_basecalls_per_cell = (afm_maegatk.layers['AD'].A>0).sum(axis=1)
+maegatk_var_basecalls_per_cell = (afm_maegatk.layers['AD'].toarray()>0).sum(axis=1)
 
 
 ##
 
 
-# Viz
-fig, axs = plt.subplots(1,2,figsize=(10,5), subplot_kw={'projection': 'polar'})
-mt.pl.MT_coverage_by_gene_polar(mito_prep.query('cell in @subset'), sample='MiTo', ax=axs[0])
-mt.pl.MT_coverage_by_gene_polar(maegatk_mock.query('cell in @subset'), sample='MiTo', ax=axs[1])
-fig.subplots_adjust(top=.8, bottom=.2, left=.2, right=.8 )
-plt.show()
-
-
-
-##
-
-
+# All metrics
 fig, axs = plt.subplots(1,6,figsize=(12,3))
 
 # Median coverage per cell
@@ -288,5 +277,18 @@ plu.box(df, x='pp_method', y='n variant basecalls', color='white', ax=ax, x_orde
 plu.format_ax(ax=ax, reduced_spines=True, xlabel='', ylabel='n variant basecalls')
 
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_5.pdf'))
 
+
+##
+
+
+# Coverage
+fig, axs = plt.subplots(1,2,figsize=(10,5), subplot_kw={'projection': 'polar'})
+mt.pl.MT_coverage_by_gene_polar(mito_prep.query('cell in @subset'), sample='MiTo', ax=axs[0])
+mt.pl.MT_coverage_by_gene_polar(maegatk_mock.query('cell in @subset'), sample='maegatk', ax=axs[1])
+fig.subplots_adjust(top=.8, bottom=.2, left=.2, right=.8 )
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_6.pdf'))
+
+
+##

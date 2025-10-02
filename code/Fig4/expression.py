@@ -33,7 +33,7 @@ adata.layers['raw'] = adata.X.copy()
 
 # Exploratory: spot bad cell populations
 n_cells = adata.shape[0]
-robust_genes = np.sum(adata.X.A>0, axis=0)> (.01 * n_cells)
+robust_genes = np.sum(adata.X.toarray()>0, axis=0)> (.01 * n_cells)
 test = adata.var_names.str.startswith('MT-') | \
        adata.var_names.str.startswith('RPL') | \
        adata.var_names.str.startswith('RPS')
@@ -71,7 +71,7 @@ adata.layers['raw'] = adata.X.copy()
 
 # Gene filtering
 n_cells = adata.shape[0]
-robust_genes = np.sum(adata.X.A>0, axis=0)> (.01 * n_cells)
+robust_genes = np.sum(adata.X.toarray()>0, axis=0)> (.01 * n_cells)
 test = adata.var_names.str.startswith('MT-') | \
        adata.var_names.str.startswith('RPL') | \
        adata.var_names.str.startswith('RPS')
@@ -83,7 +83,7 @@ sc.pp.highly_variable_genes(adata, n_top_genes=2000, batch_key="sample")
 
 # Remove cc genes from highly_variable_genes
 ki67_index = np.where(adata.var_names=='MKI67')[0]
-corr = np.corrcoef(adata.X.A.T)
+corr = np.corrcoef(adata.X.toarray().T)
 
 # sns.kdeplot(corr[:,ki67_index])
 # plt.show()
@@ -166,7 +166,7 @@ adata.uns['log1p']['base'] = np.exp(1)
 min_n_cells = adata.obs[chosen].value_counts().min() * .5
 test = (~adata.var_names.str.contains('.', regex=False)) & \
        (~adata.var_names.str.contains('LIN')) & \
-       (np.sum(adata.layers['raw'].A>0, axis=0) >= min_n_cells)
+       (np.sum(adata.layers['raw'].toarray()>0, axis=0) >= min_n_cells)
 adata = adata[:,test].copy()
 sc.tl.rank_genes_groups(adata, groupby=chosen, method='wilcoxon', pts=True)
 

@@ -2,7 +2,7 @@
 Main Fig.3. Benchmarking clonal inference. MiTo vs clonal inference methods
 
 1. Chosen MT-SNVs range. 
-2. ARI,NMI
+2. ARI, n clones
 3. Clonal assignments (UMAPs/confusion matrices)
 """
 
@@ -38,25 +38,24 @@ def extract_bench_df(path_data):
     """
     Extract performances from benchmarking folder.
     """
-    bench_results = []
+    res = {'ARI':[],'NMI':[], '% unassigned':[], 
+           'sample':[], 'job_id':[], 'method':[],
+           'n_inferred':[]}
+    
     for folder, _, files in os.walk(path_data):
         for file in files:
-            splitted = os.path.join(folder, file).split('/')
-            sample = splitted[-3]
-            job_id = splitted[-2]
-            if file.startswith('bench'):
+            if file.endswith('pickle'):
                 with open(os.path.join(folder, file), 'rb') as f:
                     d = pickle.load(f)
-                res = {}
-                res['ARI'] = [ d[k]['ARI'] for k in d ]
-                res['NMI'] = [ d[k]['NMI'] for k in d ]
-                res['% unassigned'] = [ d[k]['% unassigned'] for k in d ]
-                res['sample'] = [ sample for _ in range(len(d)) ]
-                res['job_id'] = [ job_id for _ in range(len(d)) ]
-                res['method'] = list(d.keys())
-                bench_results.append(pd.DataFrame(res))
+                res['n_inferred'].append(d['labels'].loc[lambda x: ~x.isna()].unique().size)
+                res['ARI'].append(d['ARI'])
+                res['NMI'].append(d['NMI'])
+                res['% unassigned'].append(d['% unassigned'])
+                res['sample'].append(d['sample'])
+                res['job_id'].append(d['job_id'])
+                res['method'].append(d['method'])
 
-    df_bench = pd.concat(bench_results).reset_index()
+    df_bench = pd.DataFrame(res)
 
     return df_bench
 
@@ -142,18 +141,16 @@ order = df_bench.groupby('method')['ARI'].median().sort_values().index
 colors = { k:v for k,v in zip(order, sc.pl.palettes.vega_10_scanpy) }
 
 # ARI
-plu.strip(df_bench, 'sample', 'ARI', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
-plu.bar(df_bench, 'sample', 'ARI', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
-axs[0].set_ylim((-.02,1))
-axs[0].axhline(.9, linestyle='--', color='k', linewidth=.5)
-plu.format_ax(ax=axs[0], xlabel='', ylabel='ARI', reduced_spines=True)
+plu.strip(df_bench, 'sample', 'n_inferred', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
+plu.bar(df_bench, 'sample', 'n_inferred', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
+plu.format_ax(ax=axs[0], xlabel='', ylabel='n clones', reduced_spines=True)
 
 # NMI
-plu.strip(df_bench, 'sample', 'NMI', by='method', by_order=order, categorical_cmap=colors, ax=axs[1])
-plu.bar(df_bench, 'sample', 'NMI', by='method', by_order=order, categorical_cmap=colors, ax=axs[1])
+plu.strip(df_bench, 'sample', 'ARI', by='method', by_order=order, categorical_cmap=colors, ax=axs[1])
+plu.bar(df_bench, 'sample', 'ARI', by='method', by_order=order, categorical_cmap=colors, ax=axs[1])
 axs[1].set_ylim((-.02,1))
 axs[1].axhline(.9, linestyle='--', color='k', linewidth=.5)
-plu.format_ax(ax=axs[1], xlabel='', ylabel='NMI', reduced_spines=True)
+plu.format_ax(ax=axs[1], xlabel='', ylabel='ARI', reduced_spines=True)
 
 # Readjust and save
 fig.subplots_adjust(right=.75, top=.85, left=.15, bottom=.15)

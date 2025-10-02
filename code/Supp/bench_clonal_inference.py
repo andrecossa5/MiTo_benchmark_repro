@@ -31,7 +31,7 @@ path_results = os.path.join(path_main, 'results', 'others', 'Fig3')
 
 # Params
 plu.set_rcParams()
-matplotlib.rcParams.update({'figure.dpi':150})
+matplotlib.rcParams.update({'figure.dpi':300})
 path_data = os.path.join(path_main, 'data', 'lineage_inference', 'UPMGA')
 
 # Samples order
@@ -94,7 +94,17 @@ fig.savefig(os.path.join(path_figures, 'selected_MT-SNVs.pdf'))
 # Extract bench dataframe
 path_data = os.path.join(path_main, 'data', 'bench', 'clonal_inference')
 df_bench = mt.ut.extract_bench_df(path_data)
-df_bench.groupby(['sample', 'method'])[['ARI', 'NMI']].median()
+# df_bench.groupby(['sample', 'method'])[['ARI', 'NMI']].median()
+
+# Add number of GBC clones
+path_lineage_inference = os.path.join(path_main, 'data', 'lineage_inference', 'UPMGA')
+n_GBC = []
+for i in range(df_bench.shape[0]):
+    s = df_bench.iloc[i,:]
+    afm = sc.read(os.path.join(path_lineage_inference, s['sample'], s['job_id'], 'afm_filtered.h5ad'))
+    n_GBC.append(afm.obs['GBC'].unique().size)
+df_bench['n_GT'] = n_GBC
+df_bench['diff'] = df_bench['n_inferred'] - df_bench['n_GT']
 
 
 ##
@@ -112,18 +122,16 @@ order = df_bench.groupby('method')['ARI'].median().sort_values().index
 colors = plu.create_palette(df, 'method', order=order, col_list=sc.pl.palettes.vega_10_scanpy)
 
 # ARI
-plu.strip(df_bench, 'sample', 'ARI', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
-plu.bar(df_bench, 'sample', 'ARI', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
-axs[0].set_ylim((-.02,1))
-axs[0].axhline(.9, linestyle='--', color='k', linewidth=.5)
-plu.format_ax(ax=axs[0], xlabel='', ylabel='ARI', reduced_spines=True, rotx=90)
+plu.strip(df_bench, 'sample', 'diff', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
+plu.bar(df_bench, 'sample', 'diff', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
+plu.format_ax(ax=axs[0], xlabel='', ylabel='nMT - nGBC ', reduced_spines=True, rotx=90)
 
 # NMI
-plu.strip(df_bench, 'sample', 'NMI', by='method', by_order=order, categorical_cmap=colors, ax=axs[1])
-plu.bar(df_bench, 'sample', 'NMI', by='method', by_order=order, categorical_cmap=colors, ax=axs[1])
+plu.strip(df_bench, 'sample', 'ARI', by='method', by_order=order, categorical_cmap=colors, ax=axs[1])
+plu.bar(df_bench, 'sample', 'ARI', by='method', by_order=order, categorical_cmap=colors, ax=axs[1])
 axs[1].set_ylim((-.02,1))
 axs[1].axhline(.9, linestyle='--', color='k', linewidth=.5)
-plu.format_ax(ax=axs[1], xlabel='', ylabel='NMI', reduced_spines=True, rotx=90)
+plu.format_ax(ax=axs[1], xlabel='', ylabel='ARI', reduced_spines=True, rotx=90)
 plu.add_legend(colors, label='Method', ax=axs[1])
 
 # Readjust and save
@@ -295,9 +303,9 @@ plu.strip(df, x='sample', y='peak_rss', by='method', x_order=samples,
           categorical_cmap=cmap, by_order=order, ax=axs[1])
 plu.format_ax(ax=axs[1], ylabel='Peak rss (GB)', xlabel='', reduced_spines=True)
 
-
 fig.tight_layout()
-plt.show()
+path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
+fig.savefig(os.path.join(path_figures, 'clonal_inference_time_memory.pdf'))
 
 
 ##

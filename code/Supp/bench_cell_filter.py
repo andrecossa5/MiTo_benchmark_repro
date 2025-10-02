@@ -18,7 +18,7 @@ matplotlib.use('macOSX')
 
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
-# path_figures = os.path.join(path_main, 'results', 'figures', 'Fig2')
+path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
 # path_results = os.path.join(path_main, 'results', 'others', 'Fig2')
 
 
@@ -30,7 +30,7 @@ path_data = os.path.join(path_main, 'data', 'general', 'AFMs', 'maegatk')
 
 # Params
 plu.set_rcParams()
-matplotlib.rcParams.update({'figure.dpi':150})
+matplotlib.rcParams.update({'figure.dpi':350})
 
 # Read afm
 sample = 'MDA_PT'
@@ -94,9 +94,8 @@ for i,cell_filter in enumerate(cell_filters):
     ax.text(.25, .45, f'n cells: {n_cells:.2f}', transform=ax.transAxes, fontsize=7)
 
 plu.add_legend(cmap, ax=axs[0], loc='lower right', label='Cell', bbox_to_anchor=(1,0))
-
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_fig_3ef.pdf'))
 
 
 ##
@@ -127,11 +126,8 @@ plu.bar(df_plot, x='min_cell_number', y='n clones',
         by='cell_filter', ax=ax, categorical_cmap=cmap, by_order=by_order)
 plu.format_ax(ax=ax, ylabel='n clones', xlabel='Min cell number', reduced_spines=True)
 plu.add_legend(cmap, label='Cell filter', ax=ax)
-
 fig.subplots_adjust(right=.6, bottom=.15, left=.15, top=.85)
-plt.show()
-
-
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_3h.pdf'))
 
 
 ##
@@ -140,7 +136,6 @@ plt.show()
 # 2. Extended summary  -------------------------- 
 
 path_data = os.path.join(path_main, 'data', 'bench', 'tune_cell_filter')
-
 
 L = []
 for folder,_,files in os.walk(path_data):
@@ -155,10 +150,16 @@ varying_options = (df[options+['cell_filter']].nunique()).loc[lambda x:x>1].inde
 metrics_of_interest = ['ARI', 'NMI', 'corr', 'AUPRC', 'n_cells', 'n_vars', 'n_GBC_groups']
 
 (
-    df.groupby(['sample']+varying_options)
-    [['ARI', 'NMI', 'corr', 'AUPRC', 'n_cells', 'n_GBC_groups']]
-    .median()
+    df
+    [['n_cells', 'sample', 'cell_filter', 'min_cell_number']].reset_index(drop=True).drop_duplicates()
+    .query('cell_filter=="filter2" or cell_filter=="No filter"')
+    .pivot_table(index=['sample','min_cell_number'],
+                       columns='cell_filter',
+                       values='n_cells')
+    .reset_index()
+    .assign(frac=lambda x: (x['No filter'] - x['filter2']) / x['No filter'] )
 )
+
 
 
 ##
@@ -201,42 +202,7 @@ for i,metric in enumerate(metrics_of_interest):
 fig.tight_layout()
 plu.add_legend(cmap, label='Cell filter', ax=axs[0,6])
 fig.subplots_adjust(top=.90, bottom=.2, right=.78, left=.1, wspace=.9)
-plt.show()
-
-
-##
-
-
-
-
-# fig, axs = plt.subplots(1,len(metrics_of_interest),figsize=(14,4))
-
-# x_order = ['0', '5']
-# by_order = ['No filter', 'filter1', 'filter2']
-
-# cmap = plu.create_palette(df, 'cell_filter', order=by_order[1:], palette='Blues')
-# cmap = {**{'No filter':'lightgrey'},**cmap}
-
-# for i,metric in enumerate(metrics_of_interest):
-#     plu.strip(df, x='min_cell_number', y=metric, 
-#             x_order=x_order, by_order=by_order,
-#             by='cell_filter', categorical_cmap=cmap, ax=axs[i])
-#     kwargs = {   
-#         'boxprops' : {'linewidth': 0}, 
-#         'medianprops': {"color": "black", "linewidth": 1.5},
-#         'whiskerprops':{'linewidth':0},
-#         'fill':False
-#     }
-#     plu.box(df, x='min_cell_number', y=metric,
-#             x_order=x_order, by_order=by_order, kwargs=kwargs,
-#             by='cell_filter', ax=axs[i])#, categorical_cmap=cmap)
-#     plu.format_ax(ax=axs[i], xlabel='n cells', title=metric, reduced_spines=True)
-#     if i==0:
-#         plu.format_ax(ax=axs[i], ylabel='Value')#, xlabel='n cells', title=metric, reduced_spines=True)
-# 
-# plu.add_legend(cmap, label='Cell filter', ax=axs[i])
-# fig.subplots_adjust(top=.85, bottom=.15, right=.78, left=.1, wspace=.8)
-# plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_3il.pdf'))
 
 
 ##

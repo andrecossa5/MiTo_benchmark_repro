@@ -22,7 +22,7 @@ matplotlib.use('macOSX')
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
 path_data = os.path.join(path_main, 'data', 'bench', 'tune_genotyping')
-# path_figures = os.path.join(path_main, 'results', 'figures', 'Fig2')
+path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
 # path_results = os.path.join(path_main, 'results', 'others', 'Fig2')
 
 
@@ -31,7 +31,7 @@ path_data = os.path.join(path_main, 'data', 'bench', 'tune_genotyping')
 
 # Params
 plu.set_rcParams()
-matplotlib.rcParams.update({'figure.dpi':150})
+matplotlib.rcParams.update({'figure.dpi':100})
 
 
 ##
@@ -71,7 +71,7 @@ for i,sample in enumerate(['MDA_clones', 'MDA_PT', 'MDA_lung']):
 
 plu.add_legend(cmap, label='Min prevalence', ax=axs[i])
 fig.subplots_adjust(left=.1, right=.8, top=.9, bottom=.25)
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_11.pdf'))
 
 
 ##
@@ -86,7 +86,7 @@ metrics_of_interest += [ 'median_n_vars_per_cell' ]
 # Separate sample image
 fig, axs = plt.subplots(1,len(metrics_of_interest), figsize=(12,2.5))
 
-sample = 'MDA_PT'
+sample = 'MDA_lung'
 cmap = {'vanilla' : '#E8E0E0', 'MiTo' : '#D15757' }
 
 for i,metric in enumerate(metrics_of_interest):
@@ -104,7 +104,7 @@ for i,metric in enumerate(metrics_of_interest):
     plu.format_ax(ax=axs[i], reduced_spines=True, xlabel='min n alt UMIs', ylabel=metric)
 
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_12_MDA_lung.pdf'))
 
 
 ##
@@ -118,48 +118,54 @@ path_data = os.path.join(path_main, 'data', 'general', 'AFMs', 'maegatk')
 sample = 'MDA_clones'
 afm = sc.read(os.path.join(path_data, f'afm_{sample}.h5ad'))
 afm = mt.pp.filter_cells(afm, cell_filter='filter2')
-afm = mt.pp.filter_afm(afm, lineage_column='GBC', min_cell_number=5)
+afm = mt.pp.filter_afm(afm, lineage_column='GBC', min_cell_number=1)
 
 
 ##
 
 
 L = []
-combos = product(np.linspace(.1,1,10), np.linspace(.1,50,10), [True, False])
+combos = list(product(np.linspace(.1,1,5), np.linspace(.01,5,5), [True]))
 
-for i,(perc_sites,theta,add) in enumerate(combos):
+for step in range(50):
 
-    stats = {}
-    stats['perc_sites'] = perc_sites
-    stats['theta'] = theta
-    stats['add'] = add
-    afm_perturbed, AD_corr = mt.ut.perturb_AD_counts(afm.copy(), perc_sites=perc_sites, theta=theta, add=add)
-    stats['AD_corr'] = AD_corr
+    for i,(perc_sites,theta,add) in enumerate(combos):
 
-    for bin_method in ['MiTo', 'vanilla']:
-        d_ = stats.copy()
-        d_['bin_method'] = bin_method
-        mt.pp.call_genotypes(afm_perturbed, bin_method=bin_method)
-        mt.pp.compute_distances(afm_perturbed, precomputed=True, distance_key='perturbed')
-        index,_,_ = mt.pp.kNN_graph(D=afm_perturbed.obsp['perturbed'].A, from_distances=True, k=10)
-        d_['NN_purity'] = mt.ut.NN_purity(index, labels=afm_perturbed.obs['GBC'].values)
-        d_['kBET'] = mt.ut.kbet(index, batch=afm_perturbed.obs['GBC'])
-        tree_perturbed = mt.tl.build_tree(afm_perturbed, distance_key='perturbed', precomputed=True)
-        d_['tree_char_corr'] = mt.ut.calculate_corr_distances(tree_perturbed)[0]
-        L.append(d_)
+        stats = {}
+        stats['step'] = step
+        stats['perc_sites'] = perc_sites
+        stats['theta'] = theta
+        stats['add'] = add
+        afm_perturbed, AD_corr = mt.ut.perturb_AD_counts(afm.copy(), perc_sites=perc_sites, theta=theta, add=add)
+        stats['AD_corr'] = AD_corr
+
+        for bin_method in ['MiTo', 'vanilla']:
+
+            d_ = stats.copy()
+            d_['bin_method'] = bin_method
+            mt.pp.call_genotypes(afm_perturbed, bin_method=bin_method)
+            mt.pp.compute_distances(afm_perturbed, precomputed=True, distance_key='perturbed')
+            d_['AUPRC'] =  mt.ut.distance_AUPRC(afm_perturbed.obsp['perturbed'].toarray(), afm_perturbed.obs['GBC'].values)
+            tree_perturbed = mt.tl.build_tree(afm_perturbed, distance_key='perturbed', precomputed=True)
+            d_['tree_char_corr'] = mt.ut.calculate_corr_distances(tree_perturbed)[0]
+            L.append(d_)
 
 ##
 
 df = pd.DataFrame(L)
-df['perc_sites'] = np.round(df['perc_sites']*100,1)
-df['theta'] = np.round(df['theta'],1)
+df['perc_sites'] = np.round(df['perc_sites']*100)
+df['theta'] = np.round(df['theta'],2)
+
+plt.plot(df['perc_sites'], df['AD_corr'], 'ko')
+plt.show()
+
 
 # Viz
 fig, axs = plt.subplots(2,2,figsize=(8,5))
 
 by_order = ['vanilla', 'MiTo']
-metrics = ['kBET', 'tree_char_corr']
-names = dict(zip(metrics, ['kBET', 'Tree-character\ndistance correlation']))
+metrics = ['AUPRC', 'tree_char_corr']
+names = dict(zip(metrics, ['AUPRC', 'Tree-character\ndistance correlation']))
 cmap = {'vanilla' : '#E8E0E0', 'MiTo' : '#D15757' }
 
 for i,metric in enumerate(metrics):
@@ -173,7 +179,7 @@ for i,metric in enumerate(metrics):
     plu.format_ax(ax=axs[1,i], reduced_spines=True, xlabel='Binomial noise', ylabel=names[metric])
 
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_13.pdf'))
 
 
 ##
@@ -182,7 +188,7 @@ plt.show()
 fig, ax = plt.subplots()
 plu.add_legend(cmap, label='Genotyping', ax=ax, loc='center', bbox_to_anchor=(.5,.5), ncols=2)
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_figures, 'legend_genotyping.pdf'))
 
 
 ##

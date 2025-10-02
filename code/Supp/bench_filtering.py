@@ -1,5 +1,5 @@
 """
-Bench filtering
+Bench filtering.
 """
 
 import os
@@ -20,7 +20,7 @@ matplotlib.use('macOSX')
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
 path_data = os.path.join(path_main, 'data', 'bench', 'tune_filtering')
-# path_figures = os.path.join(path_main, 'results', 'figures', 'Fig2')
+path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
 # path_results = os.path.join(path_main, 'results', 'others', 'Fig2')
 
 
@@ -47,7 +47,7 @@ metrics_of_interest = ['ARI', 'n_cells', 'n_vars', 'Av. degree', 'Trasitions /\n
 
 # Viz
 plu.set_rcParams()
-matplotlib.rcParams.update({'figure.dpi':150})
+matplotlib.rcParams.update({'figure.dpi':350})
 
 ##
 
@@ -66,7 +66,6 @@ for i,metric in enumerate(metrics_of_interest):
     plu.format_ax(ax=axs[i], ylabel=metric, xlabel='', reduced_spines=True)
 
 plu.add_legend(cmap, label='min AD in +cells', ax=axs[0], bbox_to_anchor=(0.5, 1.3), loc='center', ncols=3)
-
 fig.subplots_adjust(left=.2, right=.85, bottom=.1, top=.9)
 plt.show()
 
@@ -139,7 +138,7 @@ plu.strip(df.set_index('job_id'), x='sample', y='n_REDIdb', ax=axs[1], x_order=o
 plu.format_ax(ax=axs[1], xlabel='', ylabel='n REDIdb MT-SNVs', reduced_spines=True)
 
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_9_uninformative.pdf'))
 
 
 ##
@@ -159,7 +158,7 @@ for i,sample in enumerate(order):
     axs[i].set(title=sample, ylabel='Allelic Frequency' if i==0 else '')
 
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_9_spectrum.pdf'))
 
 
 ##
@@ -193,7 +192,7 @@ cmap = plu.create_palette(df_plot, 'cat', order=['Undefined', 'Defined'], palett
 plu.bb_plot(df_plot, cov1='sample', cov2='cat', ax=ax, categorical_cmap=cmap, show_y=True)
 plu.add_legend(cmap, label='Clone type', loc='center', bbox_to_anchor=(.5,1.4), ncols=2, ax=ax)
 fig.subplots_adjust(top=.6, bottom=.3, right=.85, left=.25)
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_10a.pdf'))
 
 ##
 
@@ -215,6 +214,6 @@ plu.format_ax(ax=ax, xlabel='n enriched MT-SNVs', ylabel='Density',
               title=f'n lentiviral clones: {df_plot.shape[0]}', reduced_spines=True)
 plu.add_legend(cmap, label='Sample', loc='upper right', bbox_to_anchor=(1,1), ax=ax)
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_10b.pdf'))
 
 ##

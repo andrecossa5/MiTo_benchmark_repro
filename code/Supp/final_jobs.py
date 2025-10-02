@@ -19,7 +19,7 @@ path_results = os.path.join(path_main, 'results', 'others', 'Fig2')
 
 
 # Format tune output
-path_data = os.path.join(path_main, 'data', 'tune')
+path_data = os.path.join(path_main, 'data', 'bench', 'tune_filtering')
 df, metrics, options = mt.ut.format_tuning(path_data)
 df['frac_unassigned'] = df['unassigned'] / df['n_cells']
 
@@ -45,7 +45,7 @@ for sample in samples:
     (   
         df_final[['job_id']]    
         .assign(sample=sample, afm=os.path.join(path_, sample, 'afm.h5ad')) 
-        .to_csv(os.path.join(path_results, f'{sample}_final_jobs.csv'), index=False) 
+        .to_csv(os.path.join(path_results, f'{sample}_final_jobs_aa.csv'), index=False) 
     )
 
 

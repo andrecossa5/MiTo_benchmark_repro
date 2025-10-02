@@ -1,5 +1,5 @@
 """
-Bench cell_filter, preliminary.
+Bench cell_filter, preliminary. (Supp. Fig. )
 """
 
 import os
@@ -18,10 +18,13 @@ matplotlib.use('macOSX')
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
 path_data = os.path.join(path_main, 'data', 'bench', 'tune_filters_preliminary')
-# path_figures = os.path.join(path_main, 'results', 'figures', 'Fig2')
-# path_results = os.path.join(path_main, 'results', 'others', 'Fig2')
+path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
 
 
+##
+
+
+# Format data
 L = []
 for folder,_,files in os.walk(path_data):
     if any([ x.startswith('all') for x in files]):
@@ -40,29 +43,7 @@ metrics_of_interest = ['ARI', 'NMI', 'corr', 'AUPRC', 'n_cells', 'n_vars', 'n_GB
 
 # Plot
 plu.set_rcParams()
-plt.rcParams.update({'figure.dpi':150})
-
-
-# Cell filters, global performance tested over other 4 major variant filter varying options.
-fig = plt.figure(figsize=(10,4))
-
-cmap = plu.create_palette(df, 'cell_filter', palette='Blues')
-for i,y in enumerate(metrics_of_interest):
-    ax = fig.add_subplot(2,4,i+1)
-    plu.bar(df, x='sample', y=y, by='cell_filter', categorical_cmap=cmap, ax=ax)
-    plu.format_ax(
-        reduced_spines=True, 
-        xlabel='', 
-        ylabel=y,
-        xticks=['','',''] if i<4 else None,
-        rotx=90,
-        ax=ax
-    )
-    # fig.subplots_adjust(left=.15,top=.85,bottom=.15,right=.6)
-
-plu.add_legend(cmap, label='Cell filter', ax=ax)
-fig.tight_layout()
-plt.show()
+plt.rcParams.update({'figure.dpi':350})
 
 
 ##
@@ -135,7 +116,32 @@ plu.format_ax(ax=axs[3], xticks=[''for _ in range(len(x_order))],
 axs[3].grid(axis='x', linewidth=.2)
 
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_2_up.pdf'))
+
+
+##
+
+
+# Cell filters, global performance tested over other 4 major variant filter varying options.
+fig = plt.figure(figsize=(10,4))
+
+df = pd.concat(L)
+cmap = plu.create_palette(df, 'cell_filter', palette='Blues')
+for i,y in enumerate(metrics_of_interest):
+    ax = fig.add_subplot(2,4,i+1)
+    plu.bar(df, x='sample', y=y, by='cell_filter', categorical_cmap=cmap, ax=ax)
+    plu.format_ax(
+        reduced_spines=True, 
+        xlabel='', 
+        ylabel=y,
+        xticks=['','',''] if i<4 else None,
+        rotx=90,
+        ax=ax
+    )
+
+plu.add_legend(cmap, label='Cell filter', ax=ax)
+fig.tight_layout()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_2_down.pdf'))
 
 
 ##

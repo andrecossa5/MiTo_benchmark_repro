@@ -50,6 +50,8 @@ df = (
 ##
 
 
+
+
 # Select metrics to plot
 metrics = [
     'n_cells', 'n_characters', 'median_char_per_cell', 'density',

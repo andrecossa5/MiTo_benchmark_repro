@@ -61,6 +61,7 @@ path_figures = os.path.join(path_main, 'results', 'figures', 'Fig4')
 
 # Paths
 path_data = os.path.join(path_main, 'results', 'others', 'Fig4', 'longitudinal')
+path_supp_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
 path_figures = os.path.join(path_main, 'results', 'figures', 'Fig4')
 
 # Read data
@@ -78,15 +79,15 @@ with open(os.path.join(path_data, 'annotated_tree.pickle'), 'rb') as f:
 # Params
 plu.set_rcParams()
 
-# fig, ax = plt.subplots(figsize=(3.5,3.5))
-# mt.pl.heatmap_distances(afm, tree=tree, ax=ax)
-# fig.tight_layout()
-# plt.show()
-# 
-# fig, ax = plt.subplots(figsize=(3.5,3.5))
-# mt.pl.heatmap_variants(afm, tree=tree, ax=ax, kwargs={'x_names_size':3}, cmap='afmhot_r')
-# fig.tight_layout()
-# plt.show()
+fig, ax = plt.subplots(figsize=(4,4))
+mt.pl.heatmap_distances(afm, tree=tree, ax=ax)
+fig.tight_layout()
+plu.save_best_pdf_quality(fig, figsize=(4,4), path=path_supp_figures, name='distances.pdf', dpi=1000)
+
+fig, ax = plt.subplots(figsize=(4,4))
+mt.pl.heatmap_variants(afm, tree=tree, ax=ax, kwargs={'x_names_size':3}, cmap='afmhot_r')
+fig.tight_layout()
+plu.save_best_pdf_quality(fig, figsize=(4,4), path=path_supp_figures, name='variants_heat.pdf', dpi=1000)
 
 
 ##

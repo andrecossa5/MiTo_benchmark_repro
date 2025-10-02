@@ -1,9 +1,6 @@
 """
-Main Fig.3. Benchmarking clonal inference. MiTo vs clonal inference methods
-
-1. Chosen MT-SNVs range. 
-2. ARI, n clones
-3. Clonal assignments (UMAPs/confusion matrices)
+Fig.3
+Clonal inference benchmark.
 """
 
 import os
@@ -16,7 +13,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotting_utils as plu
-matplotlib.use('macOSX')
+# matplotlib.use('macOSX')          # On macOS only
 
 
 ##
@@ -24,7 +21,8 @@ matplotlib.use('macOSX')
 
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
-path_data = os.path.join(path_main, 'data', 'bench', 'clonal_inference') 
+path_bench = os.path.join(path_main, 'data', 'bench', 'clonal_inference') 
+path_filtered_afms = os.path.join(path_main, 'data', 'lineage_inference', 'UPMGA') 
 path_figures = os.path.join(path_main, 'results', 'figures', 'Fig3')
 path_results = os.path.join(path_main, 'results', 'others', 'Fig3')
 
@@ -32,47 +30,16 @@ path_results = os.path.join(path_main, 'results', 'others', 'Fig3')
 ##
 
 
-# Utils  --------------------------------------- # 
-
-def extract_bench_df(path_data):
-    """
-    Extract performances from benchmarking folder.
-    """
-    res = {'ARI':[],'NMI':[], '% unassigned':[], 
-           'sample':[], 'job_id':[], 'method':[],
-           'n_inferred':[]}
-    
-    for folder, _, files in os.walk(path_data):
-        for file in files:
-            if file.endswith('pickle'):
-                with open(os.path.join(folder, file), 'rb') as f:
-                    d = pickle.load(f)
-                res['n_inferred'].append(d['labels'].loc[lambda x: ~x.isna()].unique().size)
-                res['ARI'].append(d['ARI'])
-                res['NMI'].append(d['NMI'])
-                res['% unassigned'].append(d['% unassigned'])
-                res['sample'].append(d['sample'])
-                res['job_id'].append(d['job_id'])
-                res['method'].append(d['method'])
-
-    df_bench = pd.DataFrame(res)
-
-    return df_bench
-
-
-##
-
-
-# 1. Visualize MT-SNVs from top chosen MT-SNVs spaces --------------------------------------- # 
+# Fig 3a. Visualize MT-SNVs from MT-SNVs spaces chosen for benchmarking ---------------------------- # 
 
 # Params
-plu.set_rcParams()
+plu.set_rcParams({'figure.dpi':350})
 
 # Samples order
 samples = ['MDA_clones', 'MDA_PT', 'MDA_lung']
 
-# Here we go
-fig, axs = plt.subplots(1,3,figsize=(10,4))
+# Plot
+fig, axs = plt.subplots(1,3,figsize=(8,3))
 
 for i,sample in enumerate(samples):
     
@@ -80,13 +47,17 @@ for i,sample in enumerate(samples):
     mean_AD_in_positives = []
     variants = []
 
-    for job in os.listdir(os.path.join(path_data, sample)):
-        afm = sc.read(os.path.join(path_data, sample, job, 'afm.h5ad'))
+    for job in os.listdir(os.path.join(path_filtered_afms, sample)):
+        afm = sc.read(os.path.join(path_filtered_afms, sample, job, 'afm_filtered.h5ad'))
         variants += afm.var_names.to_list()
-        n_positive += (afm.layers['bin'].A==1).sum(axis=0).tolist()
-        mean_AD_in_positives += np.nanmean(
-            np.where(afm.layers['bin'].A==1, afm.layers['AD'].A, np.nan), axis=0
-        ).tolist()
+        n_positive += (afm.layers['bin']==1).sum(axis=0).A1.tolist()
+        mean_AD_in_positives += (
+            np.nanmean(
+                np.where(afm.layers['bin'].toarray()==1, afm.layers['AD'].toarray(), np.nan), 
+                axis=0
+            )
+            .tolist()
+        )
 
     df = (
         pd.DataFrame(
@@ -111,27 +82,37 @@ for i,sample in enumerate(samples):
 
     ax.plot(median_n_positives, median_mean_AD_in_positives, 'rx', markersize=10)
 
-
 fig.tight_layout()
-fig.savefig(os.path.join(path_figures, 'selected_MT-SNVs.pdf'))
+fig.savefig(os.path.join(path_figures, 'Fig_3a.pdf'))
 
 
 ##
 
 
-# 2. Visualize ARI, NMI across samples and clonal inference methods --------------------------------------- # 
+# Fig 2b. Visualize key metrics samples and clonal inference methods --------------------------------------- # 
 
 # Extract bench dataframe
-df_bench = extract_bench_df(path_data)
-df_bench.groupby(['sample', 'method']).describe()
+df_bench = mt.ut.extract_bench_df(path_bench)
+df_bench.groupby('method').describe().T
+
+# Add 'nMT - nGBC' column to df_bench
+results = []
+for i,sample in enumerate(samples):
+    for job in os.listdir(os.path.join(path_filtered_afms, sample)):
+        afm = sc.read(os.path.join(path_filtered_afms, sample, job, 'afm_filtered.h5ad'))
+        results.append([job, afm.obs['GBC'].nunique()])
+
+df_bench = df_bench.merge(
+    pd.DataFrame(results, columns=['job_id', 'n_GBC']), 
+    on='job_id', how='left'
+)
+df_bench['nMT - nGBC'] = df_bench['n_inferred'] - df_bench['n_GBC']
 
 
 ##
 
 
-# Viz performance
-
-# Fig
+# Plot
 fig, axs = plt.subplots(1,2,figsize=(9,4))
 
 df_bench['sample'] = pd.Categorical(
@@ -140,33 +121,31 @@ df_bench['sample'] = pd.Categorical(
 order = df_bench.groupby('method')['ARI'].median().sort_values().index
 colors = { k:v for k,v in zip(order, sc.pl.palettes.vega_10_scanpy) }
 
-# ARI
-plu.strip(df_bench, 'sample', 'n_inferred', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
-plu.bar(df_bench, 'sample', 'n_inferred', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
-plu.format_ax(ax=axs[0], xlabel='', ylabel='n clones', reduced_spines=True)
+# 'nMT - nGBC'
+plu.strip(df_bench, 'sample', 'nMT - nGBC', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
+plu.bar(df_bench, 'sample', 'nMT - nGBC', by='method', by_order=order, categorical_cmap=colors, ax=axs[0])
+plu.format_ax(ax=axs[0], xlabel='', ylabel='nMT - nGBC', reduced_spines=True)
 
-# NMI
+# ARI
 plu.strip(df_bench, 'sample', 'ARI', by='method', by_order=order, categorical_cmap=colors, ax=axs[1])
 plu.bar(df_bench, 'sample', 'ARI', by='method', by_order=order, categorical_cmap=colors, ax=axs[1])
 axs[1].set_ylim((-.02,1))
 axs[1].axhline(.9, linestyle='--', color='k', linewidth=.5)
 plu.format_ax(ax=axs[1], xlabel='', ylabel='ARI', reduced_spines=True)
 
-# Readjust and save
 fig.subplots_adjust(right=.75, top=.85, left=.15, bottom=.15)
-fig.savefig(os.path.join(path_figures, 'clonal_reconstruction_performance.pdf'))
+fig.savefig(os.path.join(path_figures, 'Fig_3b.pdf'))
 
 
 ##
 
 
-# 3. Visualize clonal assignment across samples and clonal inference methods --------------------------------------- # 
+# Fig 3c. Visualize clonal assignment across samples and clonal inference methods --------------------------------------- # 
 
 # Extract bench dataframe
-df_bench = extract_bench_df(path_data)
-df_bench.groupby(['sample', 'method']).describe()
+df_bench = mt.ut.extract_bench_df(path_bench)
 
-# Choose one job per sample, for visualization purposes
+# Choose one representative job per sample (visualization purposes)
 top_3_jobs = (
     df_bench
     .groupby(['sample', 'job_id'])
@@ -175,9 +154,8 @@ top_3_jobs = (
     .apply(lambda x: x['job_id'].values[x['ARI'].argmax()])
     .to_dict()
 )
-top_3_jobs
 
-# Load colors
+# Load clones colors
 path_colors = os.path.join(path_main, 'data', 'general')
 with open(os.path.join(path_colors, 'clones_colors_sc.pickle'), 'rb') as f:
     clone_colors = pickle.load(f)
@@ -186,52 +164,57 @@ with open(os.path.join(path_colors, 'clones_colors_sc.pickle'), 'rb') as f:
 ##
 
 
-# Viz
-for i,sample in enumerate(['MDA_clones', 'MDA_PT', 'MDA_lung']):
+# Plot
+samples = ['MDA_clones', 'MDA_PT', 'MDA_lung']
+methods = ['MiTo', 'vireoSNP', 'leiden', 'CClone']
+
+for i,sample in enumerate(samples):
 
     # job_id
     job_id = top_3_jobs[sample]
 
-    # Read
-    afm = sc.read(os.path.join(path_data, sample, job_id, 'afm.h5ad'))
+    # Read AFM
+    afm = sc.read(os.path.join(path_filtered_afms, sample, job_id, 'afm_filtered.h5ad'))
     mt.pp.reduce_dimensions(afm)
 
-    # Ground Truth: UMAP
-    f,ax = plt.subplots(figsize=(4,4))
+    # UMAP
+    fig, ax = plt.subplots(figsize=(4,4))
     s = None if sample != 'MDA_clones' else 200
     mt.pl.draw_embedding(afm, feature='GBC', ax=ax, categorical_cmap=clone_colors, size=s)
-    f.tight_layout()
-    f.savefig(os.path.join(path_figures, f'{sample}_GT_UMAP.pdf'))
+    fig.tight_layout()
+    fig.savefig(os.path.join(path_figures, f'Fig_3c_{sample}_UMAP.pdf'))
     
     # Confusion matrices
     fig, axs = plt.subplots(1,4,figsize=(12,3))
-
-    with open(os.path.join(path_data, sample, job_id, 'bench_clonal_recontruction.pickle'), 'rb') as f:
-        d = pickle.load(f)
     
-    for j,method in enumerate(['MiTo', 'vireoSNP', 'leiden', 'CClone']):
+    # Add MT-clones labels from each methods to afm.obs
+    for j,method in enumerate(methods):
 
-        labels = d[method]['labels']
-        afm.obs[method] = labels
-        afm.obs[method][afm.obs[method].isna()] = 'unassigned'
-        afm.obs[method] = pd.Categorical(labels)
+        # Load labels
+        with open(os.path.join(path_bench, sample, f'{job_id}_{method}.pickle'), 'rb') as f:
+            d = pickle.load(f)
+        afm.obs[method] = d['labels']
+        afm = afm[~afm.obs[method].isna()].copy()
+
+        # Confusion matrix
+        df_plot = pd.crosstab(afm.obs['GBC'].astype('str'), afm.obs[method].astype('str'))
+        order_row = afm.obs['GBC'].value_counts().index
+        order_col = afm.obs[method].value_counts().index
+        df_plot = df_plot.loc[order_row,order_col]
+
+        # Plot
         ARI, NMI = (
             df_bench.query('sample==@sample and method==@method and job_id==@job_id')
             [['ARI', 'NMI']].values[0]
         )
-
-        df_plot = pd.crosstab(afm.obs['GBC'].astype('str'), afm.obs[method].astype('str'))
-        order_row = afm.obs.loc[afm.obs['GBC'].isin(df_plot.index)]['GBC'].value_counts().index
-        order_col = afm.obs.loc[afm.obs[method].isin(df_plot.columns)][method].value_counts().index
-        df_plot = df_plot.loc[order_row,order_col]
         plu.plot_heatmap(
             df_plot, ax=axs[j], palette='Blues', label='n cells',
             x_names=False, y_names=False, xlabel='Inferred', ylabel='Ground Truth',
-            title=f'Inferred clones: {df_plot.shape[1]}\nARI: {ARI:.2f}, NMI: {NMI:.2f}'
+            title=f'{method} (n clones={afm.obs[method].nunique()})\nARI: {ARI:.2f}, NMI: {NMI:.2f}'
         )
 
-        fig.tight_layout()
-        fig.savefig(os.path.join(path_figures, f'{sample}_confusion.pdf'))
+    fig.tight_layout()
+    fig.savefig(os.path.join(path_figures, f'Fig_3c_{sample}_confusion.pdf'))
 
 
 ##

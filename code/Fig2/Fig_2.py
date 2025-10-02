@@ -1,5 +1,6 @@
 """
-Benchmark output and MDA_PT example output.
+Fig 2
+Benchmarking dataset number and nf-MiTo example output.
 """
 
 import os
@@ -11,7 +12,7 @@ import mito as mt
 import plotting_utils as plu
 import matplotlib
 import matplotlib.pyplot as plt
-matplotlib.use('macOSX')
+# matplotlib.use('macOSX')          # On macOS only
 
 
 ##
@@ -214,15 +215,9 @@ fig.savefig(os.path.join(path_figures, 'Fig_2h.pdf'))
 
 
 # Fig 2i
+
+# Make UMAP
 mt.pp.reduce_dimensions(afm, metric='jaccard')
-
-# Main UMAP
-# fig, ax = plt.subplots(figsize=(4,4))
-# mt.pl.draw_embedding(afm, feature='GBC', ax=ax, categorical_cmap=clones_colors)
-# fig.tight_layout()
-# plt.show()
-
-##
 
 # Select clones and variants
 mapping = {

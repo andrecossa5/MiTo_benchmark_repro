@@ -27,7 +27,7 @@ path_results = os.path.join(path_main, 'results', 'others', 'Fig2')
 
 
 # Set params
-plu.set_rcParams({'figure.dpi':150})
+plu.set_rcParams({'figure.dpi':350})
 
 # Load clones colors
 path_colors = os.path.join(path_main, 'data', 'general')

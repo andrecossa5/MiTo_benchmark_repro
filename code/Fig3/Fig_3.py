@@ -1,6 +1,6 @@
 """
-Fig.3
-Clonal inference benchmark.
+Fig.3:
+- Clonal inference benchmark.
 """
 
 import os

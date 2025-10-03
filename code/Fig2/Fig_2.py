@@ -1,6 +1,6 @@
 """
-Fig 2
-Benchmarking dataset number and nf-MiTo example output.
+Fig 2:
+- Benchmarking dataset number and nf-MiTo example output.
 """
 
 import os

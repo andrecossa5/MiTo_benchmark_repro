@@ -1,24 +1,40 @@
 """
-Plot scLT_systems comparisons.
+Fig 5:
+- Compare cell phylogenies from different scLT systems
+- Visualize:
+    - Example cell phylogenies
+    - Quantitative metrics to evaluate cell phylogeny inference output
 """
 
 import os
-import pickle
 import pandas as pd
+import pickle
 import mito as mt
-import plotting_utils as plu
 import matplotlib
 import matplotlib.pyplot as plt
+import plotting_utils as plu
 matplotlib.use('macOSX')
 
 
-# Paths
-path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro/'
-path_results = os.path.join(path_main, 'results/others/Fig5')
-path_figures = os.path.join(path_main, 'results/figures/Fig5')
+##
+
+
+# Set paths
+path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
+path_data = os.path.join(path_main, 'results', 'others', 'Fig5')
+path_figures = os.path.join(path_main, 'results', 'figures', 'Fig5')
+
+# Set visualization params
+plu.set_rcParams({'figure.dpi':350})
+
+
+##
+
+
+# 1. Choose best combination scLT system / distance metric (within the ones tested) ---------#
 
 # Read data table, format names
-df = pd.read_csv(os.path.join(path_results, 'scLT_metrics.csv'), index_col=0)
+df = pd.read_csv(os.path.join(path_data, 'scLT_metrics.csv'), index_col=0)
 df = (
     df.drop(columns=['job_id'])
     .pivot_table(index=['method', 'sample'], values='value', columns='metric')
@@ -34,7 +50,7 @@ df['scLT_system'] = df['method']
 df.loc[df['method'].str.contains('Cas9'), 'scLT_system'] = 'Cas9'
 df.loc[df['method'].str.contains('RedeeM'), 'scLT_system'] = 'RedeeM'
 
-# Select top for Cas9 and RedeeM
+# Select top distance metrics for Cas9 and RedeeM
 (
     df.query('scLT_system=="Cas9" or scLT_system=="RedeeM"')
     .groupby(['scLT_system', 'metric'])
@@ -47,10 +63,49 @@ df = (
 )
 
 
+
 ##
 
 
+# 2. Fig 5b. Plot 4 representative phylogenies (one per scLT system) ---------#
 
+# Choose phylogenies with richest character matrices
+(
+    df.groupby('scLT_system')
+    .apply(lambda x: x.sort_values('n_characters', ascending=False).head(1))
+    [['scLT_system', 'sample']]
+)
+
+# Plot
+fig, axs = plt.subplots(1,4,figsize=(8.5,2.7))
+
+samples = ['PD34493', '3513_NT_T4', 'Young1.T1.HSP', 'MDA_PT']
+method = ['scWGS', 'Cas9', 'RedeeM', 'MAESTER']
+d = dict(zip(method, samples))
+
+for i,(method,sample) in enumerate(d.items()):
+
+    path_tree = os.path.join(path_data, 'trees', f'{sample}_tree.pickle')
+    with open(path_tree, 'rb') as f:
+        tree = pickle.load(f)
+
+    n_cells, n_vars = tree.layers['transformed'].shape
+    if method == 'Cas9':
+        n_vars = tree.layers['transformed'].nunique().sum() - \
+                 tree.layers['transformed'].shape[1]
+
+    ax = axs.ravel()[i]
+    mt.pl.plot_tree(tree, ax=ax, orient=90, branch_kwargs={'linewidth':.5})
+    ax.set(title=f'{method}: {sample}\nn leaves: {n_cells}\nn characters: {n_vars}')
+
+fig.tight_layout()
+fig.savefig(os.path.join(path_figures, 'Fig_5b.pdf'))
+
+
+##
+
+
+# 2. Fig 5c. Visualize scLT comparison results with key evaluation metrics ---------#
 
 # Select metrics to plot
 metrics = [
@@ -71,9 +126,7 @@ names = dict(zip(
 ##
 
 
-# Viz
-plu.set_rcParams({'figure.dpi':300})
-
+# Plot
 fig, axs = plt.subplots(2,4,figsize=(8.5,4.5),sharex=True)
 
 order = df.groupby('scLT_system')['median_support_biggest_clades'].median().sort_values().index
@@ -87,45 +140,8 @@ for i,metric in enumerate(metrics):
     plu.format_ax(ax=ax, reduced_spines=True, ylabel=names[metric], xlabel='', rotx=90)
 
 fig.tight_layout()
-fig.savefig(os.path.join(path_figures, 'scLT_system_overall_comparison.pdf'))
+fig.savefig(os.path.join(path_figures, 'Fig_5c.pdf'))
 
-
-##
-
-
-# Choose top samples
-(
-    df.groupby('scLT_system')
-    .apply(lambda x: x.sort_values('n_characters', ascending=False).head(1))
-    [['scLT_system', 'sample']]
-)
-
-
-# Viz trees
-plu.set_rcParams({'figure.dpi':150})
-
-fig, axs = plt.subplots(1,4,figsize=(8.5,2.7))
-
-samples = ['PD34493', '3513_NT_T4', 'Young1.T1.HSP', 'MDA_PT']
-method = ['scWGS', 'Cas9', 'RedeeM', 'MAESTER']
-d = dict(zip(method, samples))
-
-for i,(method,sample) in enumerate(d.items()):
-    path_tree = os.path.join(path_results, 'trees', f'{sample}_tree.pickle')
-    with open(path_tree, 'rb') as f:
-        tree = pickle.load(f)
-
-    n_cells, n_vars = tree.layers['transformed'].shape
-    if method == 'Cas9':
-        n_vars = tree.layers['transformed'].nunique().sum() - \
-                 tree.layers['transformed'].shape[1]
-
-    ax = axs.ravel()[i]
-    mt.pl.plot_tree(tree, ax=ax, orient=90, branch_kwargs={'linewidth':.5})
-    ax.set(title=f'{method}: {sample}\nn leaves: {n_cells}\nn characters: {n_vars}')
-
-fig.tight_layout()
-fig.savefig(os.path.join(path_figures, 'trees.pdf'))
 
 
 ##

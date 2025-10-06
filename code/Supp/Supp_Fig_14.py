@@ -1,18 +1,19 @@
+
 """
-Bench distances
+Supp Fig 14
+--distance_metric parameter tuning. 
+
+# TO DO: Add other non binary distances in the benchmark (e.g. cosine, correlation).
 """
 
 import os
-import numpy as np
 import pandas as pd
-import scanpy as sc
 import mito as mt
 import matplotlib
 import matplotlib.pyplot as plt
 import plotting_utils as plu
-from itertools import product
-from scipy.sparse import csr_matrix
 matplotlib.use('macOSX')
+
 
 
 ##
@@ -22,13 +23,16 @@ matplotlib.use('macOSX')
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
 path_data = os.path.join(path_main, 'data', 'bench', 'tune_distances')
 path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
-# path_results = os.path.join(path_main, 'results', 'others', 'Fig2')
+
+
+# Set visualization params
+plu.set_rcParams({'figure.dpi':350})
 
 
 ##
 
 
-# 1. Extended summary. ---------------------# 
+# Plot metrics with standard or weighted jaccard distance --------------------- # 
 
 L = []
 for folder,_,files in os.walk(path_data):
@@ -49,8 +53,7 @@ metrics_of_interest = ['ARI', 'NMI', 'corr', 'AUPRC', 'mean_CI', 'mean_RI', 'n M
 ##
 
 
-# Viz
-plu.set_rcParams()
+# Plot
 fig, axs =  plt.subplots(1,len(metrics_of_interest),figsize=(14,5))
 
 x_order = ['MDA_clones', 'MDA_lung', 'MDA_PT']
@@ -71,7 +74,7 @@ for i,metric in enumerate(metrics_of_interest):
 
 plu.add_legend(cmap, ax=axs[3], label='Distance metric', loc='center', bbox_to_anchor=(.5,1.2), ncols=2)
 fig.subplots_adjust(top=.75, left=.1, bottom=.25, right=.9, wspace=.6)
-fig.savefig(os.path.join(path_figures, 'bench_distances.pdf'))
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_14.pdf'))
 
 
 ##

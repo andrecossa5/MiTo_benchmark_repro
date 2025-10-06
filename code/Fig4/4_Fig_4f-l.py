@@ -84,7 +84,7 @@ for covariate in covariates:
     results_nb.to_csv(os.path.join(path_fitness, f'nb_results_{covariate}.csv'))
 
     # GSEA
-    results = results_nb.query('param==@covariates').set_index('gene')
+    results = results_nb.query('param==@covariate').set_index('gene')
     ranked_list = results['coef'].sort_values(ascending=False)
     gsea, gsea_df = mt.ut.run_GSEA(
         ranked_list, 
@@ -99,7 +99,7 @@ for covariate in covariates:
         regex=True
     )
     gsea_df = gsea_df[['Term', 'Term_adj', 'ES', 'NES', 'pval_adj', 'Lead_genes']]
-    gsea_df.to_csv(os.path.join(path_fitness, f'GSEA_{covariates}.csv'))
+    gsea_df.to_csv(os.path.join(path_fitness, f'GSEA_{covariate}.csv'))
 
     # ORA
     gene_list = results['coef'].sort_values(ascending=False).head(50).index.to_list()
@@ -114,7 +114,7 @@ for covariate in covariates:
         regex=True
     )
     ora_df = ora_df[['Term', 'Term_adj', 'Overlap', 'Odds Ratio', 'pval_adj', 'Genes']]
-    ora_df.to_csv(os.path.join(path_fitness, f'ORA_{covariates}.csv'))
+    ora_df.to_csv(os.path.join(path_fitness, f'ORA_{covariate}.csv'))
  
 
 ##

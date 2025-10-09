@@ -44,6 +44,7 @@ d = {
     'MAESTER':'weighted_jaccard', 'scWGS':'jaccard',
     'Cas9_unweighted':'hamming', 'Cas9_weighted':'weighted_hamming',
     'RedeeM_unweighted':'jaccard', 'RedeeM_weighted':'weighted_jaccard',
+    'EPI-clone':'jaccard'
 }
 df['metric'] = df['method'].map(d)
 df['scLT_system'] = df['method'] 
@@ -77,10 +78,10 @@ df = (
 )
 
 # Plot
-fig, axs = plt.subplots(1,4,figsize=(8.5,2.7))
+fig, axs = plt.subplots(1,5,figsize=(10.5,2.7))
 
-samples = ['PD34493', '3513_NT_T4', 'Young1.T1.HSP', 'MDA_PT']
-method = ['scWGS', 'Cas9', 'RedeeM', 'MAESTER']
+samples = ['PD34493', '3513_NT_T4', 'LARRY_mouse3', 'Young1.T1.HSP', 'MDA_PT']
+method = ['scWGS', 'Cas9', 'EPI-clone', 'RedeeM', 'MAESTER']
 d = dict(zip(method, samples))
 
 for i,(method,sample) in enumerate(d.items()):

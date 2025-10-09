@@ -1,15 +1,17 @@
 """
 Supp Fig 18:
-- Supplementary Gene Expression data for longitudinal dataset.
+- Fishplot MT- and GBC-clones in longitudinal dataset.
 """
 
 import os
+import pickle
 import numpy as np
 import scanpy as sc
 import mito as mt
 import plotting_utils as plu
 import matplotlib
 import matplotlib.pyplot as plt
+from scipy.stats import norm
 matplotlib.use('macOSX')
 
 
@@ -18,7 +20,7 @@ matplotlib.use('macOSX')
 
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
-path_longitudinal = os.path.join(path_main, 'data', 'longitudinal')
+path_lineage_inference = os.path.join(path_main, 'results', 'others', 'Fig4', 'lineage_inference')
 path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
 
 
@@ -29,67 +31,61 @@ plu.set_rcParams({'figure.dpi':350})
 ##
 
 
-# Read filtered AFM and expression data
-adata = sc.read(os.path.join(path_longitudinal, 'expression.h5ad'))
+# Utils
+def gaussian_smooth(x, y, grid, sd):
+    weights = np.transpose([norm.pdf(grid, m, sd) for m in x])
+    weights = weights / weights.sum(0)
+    return (weights * y).sum(1)
 
 
 ##
 
 
-# Supp Fig 18a. Dotplot cell_state markers ------------------------------------#
+# Fig 18. AFM and cell-cell distances visualization ------------------------------------#
 
-# Marker genes
-group = 'cell_state'
-min_n_cells = adata.obs[group].value_counts().min() * .5
-test = np.sum(adata.layers['raw'].toarray()>0, axis=0) >= min_n_cells
-adata = adata[:,test].copy()
-sc.tl.rank_genes_groups(adata, groupby=group, method='wilcoxon', pts=True)
+# Read filtered AFM cell phylogeny
+afm = sc.read(os.path.join(path_lineage_inference, 'afm_filtered.h5ad'))
+with open(os.path.join(path_lineage_inference, 'annotated_tree.pickle'), 'rb') as f:
+    tree = pickle.load(f)
 
-# Filter final marker genes
-res_de = mt.ut.format_rank_genes_groups(adata)
-order_groups = mt.ut.order_groups(adata, groupby=group, obsm_key='X_pca', n_dims=20)
-res_de_filtered = mt.ut.format_rank_genes_groups(adata, filter_genes=True)
-top_markers = mt.ut.get_top_markers(res_de_filtered, order_groups=order_groups, ntop=3)
-df_plot = res_de.query('gene in @top_markers')
-
-# Dotplot
-fig, ax = plt.subplots(figsize=(6,3))
-plu.dotplot(df_plot, 'gene', 'group', 
-            order_x=top_markers, order_y=order_groups,
-            color='log2FC', size='pct_group', ax=ax, vmin=-5, vmax=5)
-plu.format_ax(ax=ax, rotx=90, xlabel='', ylabel='Clusters')
-ax.get_legend().set_bbox_to_anchor((1,1.5))
-ax.margins(x=0.1, y=0.2)
-fig.subplots_adjust(top=.65, bottom=.35, left=.25, right=.7)
-fig.savefig(os.path.join(path_figures, 'Fig_18a.pdf'))
 
 
 ##
 
 
-# Supp Fig 18b. Cell state abundance ------------------------------------#
+# Prep data
+clone_type = 'MiTo clone'  # Change MiTo clone for MT clones
+df_long = (
+    tree.cell_meta
+    [['MiTo clone', 'GBC', 'sample']]
+    .loc[lambda x: ~x['MiTo clone'].isna()]
+    .groupby('sample')
+    .apply(lambda x: x[clone_type].value_counts(normalize=True))
+    .reset_index()
+    .pivot_table(columns='sample', index=clone_type, values='proportion', fill_value=0)
+)
 
-fig, ax = plt.subplots(figsize=(3.5,1.3))
-cmap = plu.create_palette(adata.obs, 'cell_state', col_list=plu.darjeeling)
-plu.bb_plot(adata.obs, 'sample', 'cell_state', categorical_cmap=cmap, ax=ax)
+# Colors
+colors = plu.create_palette(tree.cell_meta, clone_type, sc.pl.palettes.default_102)
+x = np.arange(df_long.shape[1])
+y = [ np.array(x) for x in df_long.values.tolist() ]
+colors_ = [ colors[x] for x in df_long.index ] 
+grid = np.linspace(-1.3, 4, num=500)
+y_smoothed = [ gaussian_smooth(x, y_, grid, .35) for y_ in y ]
+
+
+##
+
+
+# Fishplot
+fig, ax = plt.subplots(figsize=(4.5,2))
+ax.stackplot(grid, y_smoothed, baseline="sym", colors=colors_)
+plu.format_ax(ax, xticks=['PT', 'lung'], yticks=[])
+ax.spines[['right', 'bottom', 'top', 'left']].set_visible(False)
+for l in x:    
+    ax.axvline(x=l, color='k', linewidth=.5, linestyle='dashed')
 fig.tight_layout()
-fig.savefig(os.path.join(path_figures, 'Fig_18b.pdf'))
-
-
-##
-
-
-# Supp Fig 18c. UMAPs technical covariates ------------------------------------#
-
-# Add detected genes to metadata
-adata.obs['detected_genes'] = (adata.X>0).sum(1).A1
-
-# Plot embeddings
-fig, axs = plt.subplots(1,3,figsize=(6,2))
-for i,feat in enumerate(['nUMIs', 'mito_perc', 'detected_genes']):
-    sc.pl.umap(adata, color=feat, ax=axs[i], show=False, frameon=False)
-fig.tight_layout()
-fig.savefig(os.path.join(path_figures, 'Fig_18c.pdf'))
+fig.savefig(os.path.join(path_figures, f'Supp_Fig_18_{clone_type}.pdf'))
 
 
 ##

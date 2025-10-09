@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
+path_afms = os.path.join(path_main, 'data', 'general', 'AFMs')
+path_colors = os.path.join(path_main, 'data', 'general')
 path_figures = os.path.join(path_main, 'results', 'figures', 'Fig2')
 path_results = os.path.join(path_main, 'results', 'others', 'Fig2')
 
@@ -31,7 +33,6 @@ path_results = os.path.join(path_main, 'results', 'others', 'Fig2')
 plu.set_rcParams({'figure.dpi':350})
 
 # Load clones colors
-path_colors = os.path.join(path_main, 'data', 'general')
 with open(os.path.join(path_colors, 'clones_colors_sc.pickle'), 'rb') as f:
     clones_colors = pickle.load(f)
 
@@ -43,7 +44,6 @@ with open(os.path.join(path_colors, 'clones_colors_sc.pickle'), 'rb') as f:
 
 # Clonal composition: only final QC ('filter2' on MT modality) cells, before MT-SNVs filtering. 
 samples = ['MDA_clones', 'MDA_PT', 'MDA_lung']
-path_afms = os.path.join(path_main, 'data', 'general', 'AFMs')
 
 # Perform cell filtering (filter2), retrieve cell-clone assignment
 L = []

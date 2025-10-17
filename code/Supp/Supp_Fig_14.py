@@ -129,13 +129,13 @@ pd.concat(RESULTS).to_csv(os.path.join(path_tune, 'top_jobs_distances_benchmark.
 ##
 
 
-# 2. Benchmark distance metrics on a limited (n=15) number of high-quality MT-SNVs spaces ------------- # 
+# 2. Supp Fig 14 a,b. Evaluate different metrics ------------- # 
 
 # Read metrics
-df = pd.read_csv(os.path.join(path_results, 'top_jobs_distances_benchmark.csv'), index_col=0)
+df = pd.read_csv(os.path.join(path_tune, 'top_jobs_distances_benchmark.csv'), index_col=0)
 df = df.reset_index(drop=True)
 
-# Plot
+# Supp Fig 14a: Plot ARI vs distances correlation
 plu.set_rcParams({'figure.dpi':100})
 order = ['jaccard', 'weighted_jaccard', 'dice', 'cosine', 'correlation', 'euclidean']
 
@@ -148,13 +148,14 @@ plu.format_ax(ax=ax, xlabel='Distance correlation', ylabel='ARI')
 plu.add_legend(colors, label='Metric', ax=ax)
 
 fig.subplots_adjust(right=.6, bottom=.2, left=.2, top=.8)
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_14a.pdf'))
 
 
 ##
 
 
-fig, axs = plt.subplots(2,3,figsize=(6,4), sharex=True)
+# Supp Fig 14b: all other metrics
+fig, axs = plt.subplots(2,3,figsize=(5.5,3.5), sharex=True)
 
 metrics = ['AUPRC', 'kNN_SH', 'kNN_PURITY', 'kBET', 'NMI', 'NAs']
 for i, metric in enumerate(metrics):
@@ -164,76 +165,51 @@ for i, metric in enumerate(metrics):
     plu.format_ax(ax=ax, rotx=90, xlabel='', reduced_spines=True)
 
 fig.tight_layout()
-plt.show()
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_14b.pdf'))
 
 
 ##
 
 
-# One case study
+# 3. Supp Fig 14c. Visualize example cases ------------- # 
 
-df.query('sample=="MDA_PT"')['job_id'].value_counts()
+samples = ['MDA_PT', 'MDA_clones']
+job_ids = ['39aaaaf933','b9f2160731']
 
-sample = 'MDA_PT' # 'MDA_clones'
-job_id = '39aaaaf933' # 'b9f2160731'
+for sample, job_id in zip(samples, job_ids):
 
-# Read
-afm = sc.read(os.path.join(path_lineage_inference, sample, job_id, 'afm_filtered.h5ad'))
+    # Read
+    afm = sc.read(os.path.join(path_lineage_inference, sample, job_id, 'afm_filtered.h5ad'))
 
-# Compute distances in this MT-SNV space
-del afm.obsp['distances']
-del afm.uns['distance_calculations']
+    # Compute distances in this MT-SNV space
+    del afm.obsp['distances']
+    del afm.uns['distance_calculations']
 
-# Compute alternative cell-cell distances
-order = ['jaccard', 'weighted_jaccard', 'dice', 'cosine', 'correlation', 'euclidean']
-for metric in order:
-    mt.pp.compute_distances(afm, metric=metric, distance_key=f'{metric}_dists', precomputed=True)
+    # Compute alternative cell-cell distances
+    order = ['jaccard', 'weighted_jaccard', 'dice', 'cosine', 'correlation', 'euclidean']
+    for metric in order:
+        mt.pp.compute_distances(afm, metric=metric, distance_key=f'{metric}_dists', precomputed=True)
 
-# Cell phylogeny
-fig, axs = plt.subplots(1,6,figsize=(12,2.2))
+    # Cell phylogeny
+    fig, axs = plt.subplots(1,6,figsize=(12,2.2))
 
-for i,x in enumerate(order):
-    ax = axs.ravel()[i]
-    tree = mt.tl.build_tree(afm, precomputed=True, distance_key=f'{x}_dists')
-    mt.pl.heatmap_distances(afm, distance_key=f'{x}_dists', tree=tree, ax=ax)
-    ax.set(title=x)
+    for i,x in enumerate(order):
+        ax = axs.ravel()[i]
+        tree = mt.tl.build_tree(afm, precomputed=True, distance_key=f'{x}_dists')
+        mt.pl.heatmap_distances(afm, distance_key=f'{x}_dists', tree=tree, ax=ax)
+        ax.set(title=x)
 
-fig.tight_layout()
-plt.show()
-
-
-
-
-import os
-import pandas as pd
-import mito as mt
-import matplotlib
-import matplotlib.pyplot as plt
-import plotting_utils as plu
-matplotlib.use('macOSX')
-
+    fig.tight_layout()
+    fig.savefig(os.path.join(path_figures, f'Supp_Fig_14_c_{sample}.pdf'))
 
 
 ##
 
 
-# Set paths
-path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
-path_data = os.path.join(path_main, 'data', 'bench', 'tune_distances')
-path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
-
-
-# Set visualization params
-plu.set_rcParams({'figure.dpi':350})
-
-
-##
-
-
-# Plot metrics with standard or weighted jaccard distance --------------------- # 
+# 3. Supp Fig 14c. Plot metrics with standard or weighted jaccard distance --------------------- # 
 
 L = []
-for folder,_,files in os.walk(path_data):
+for folder,_,files in os.walk(path_tune):
     if any([ x.startswith('all') for x in files]):
         df,metrics,options = mt.ut.format_tuning(folder)
         L.append(df)
@@ -272,7 +248,7 @@ for i,metric in enumerate(metrics_of_interest):
 
 plu.add_legend(cmap, ax=axs[3], label='Distance metric', loc='center', bbox_to_anchor=(.5,1.2), ncols=2)
 fig.subplots_adjust(top=.75, left=.1, bottom=.25, right=.9, wspace=.6)
-fig.savefig(os.path.join(path_figures, 'Supp_Fig_14c.pdf'))
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_14d.pdf'))
 
 
 ##

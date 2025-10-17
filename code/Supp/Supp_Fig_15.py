@@ -1,6 +1,7 @@
 """
 Supp Fig 15
-Re-analysis of Ludwig et. al, 2019 dataset: 3 GT-clones C9, D6, G10 in Supp Fig 2F. 
+- Re-analysis of Ludwig et. al, 2019 dataset: 3 GT-clones C9, D6, G10 in Supp Fig 2F. 
+- Re-analysis of Weng et. al, 2024 dataset: mouse batch 1.
 """
 
 import os
@@ -10,7 +11,6 @@ import mito as mt
 import matplotlib
 import matplotlib.pyplot as plt
 import plotting_utils as plu
-from mito.tl.annotate import _get_muts_order
 from scipy.io import mmread
 from scipy.sparse import csr_matrix
 from anndata import AnnData

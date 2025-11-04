@@ -12,6 +12,9 @@ tree source_data
 
 this folder stores all preprocessed `data` and the associated `results` folders supporting the manuscript findings.
 
+## Reproduce environment
+To run this code, we need to install `MiTo` and its dependencies. See [MiTo](https://github.com/andrecossa5/MiTo).
+
 ## Reproduce analyses
 The `code` directory stores all the code to reproduce the main (Fig. 2-5) and Supplementary (Supp 2-20) figures. To acess that, clone the repo:
 

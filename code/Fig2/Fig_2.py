@@ -65,6 +65,9 @@ fig, axs = plt.subplots(1,3,figsize=(4,1.5), sharey=True)
 kwargs = {'orient':'h'}
 
 df_ = df.groupby('sample')['GBC'].nunique().to_frame('n clones').reset_index()
+
+df_['n clones'].sum()
+
 plu.bar(df_, x='n clones', y='sample', ax=axs[0], color='#105D62', with_label=True, x_order=samples, kwargs=kwargs)
 plu.format_ax(xlabel='n clones', ylabel='', ax=axs[0], reduced_spines=True)
 
@@ -270,7 +273,6 @@ cmaps = {
     )
 }
 clonal_nodes = tree.cell_meta['lca'].unique()[1:]
-
 mt.pl.plot_tree(
     tree, 
     features=['GBC', 'MiTo clone'], 

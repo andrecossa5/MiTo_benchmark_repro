@@ -135,7 +135,6 @@ tree_metrics = pd.read_csv(os.path.join(path_lineage_inference, 'tree_metrics.cs
 with open(os.path.join(path_lineage_inference, 'annotated_tree.pickle'), 'rb') as f:
     tree = pickle.load(f)
 
-
 # Plot tree
 fig, ax = plt.subplots(figsize=(6.5,5.5))
 cmaps = {

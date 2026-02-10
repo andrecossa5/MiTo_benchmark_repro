@@ -1,11 +1,12 @@
 """
 Supp Fig 6
-MiTo (raw sequencing reads pre-processing) vs maegatk (coverage across MT genome).
+--pp-method AND --filtering method combinations benchmark.
 """
 
 import os
 import pandas as pd
 import mito as mt
+import scanpy as sc
 import matplotlib
 import matplotlib.pyplot as plt
 import plotting_utils as plu
@@ -17,8 +18,7 @@ matplotlib.use('macOSX')
 
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
-path_data = os.path.join(path_main, 'data', 'bench', 'MiTo_vs_maegatk_consensus')
-path_QC_cells = os.path.join(path_main, 'data', 'general', 'QC', 'MDA_clones.txt')
+path_data = os.path.join(path_main, 'data', 'bench', 'tune_pp_method')
 path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
 
 
@@ -26,31 +26,62 @@ path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
 plu.set_rcParams({'figure.dpi':350})
 
 
+##
+
+
+# 1. Extract data from TUNE output with --pp-method and --filtering tuning ------------------------------------#
+
+L = []
+for folder,_,files in os.walk(path_data):
+    if any([ x.startswith('all') for x in files]):
+        df,metrics,options = mt.ut.format_tuning(folder)
+        L.append(df)
+df = pd.concat(L)
+df.loc[df['pp_method'] == 'mito_preprocessing', 'pp_method'] = 'MiTo'
+df['combo'] = df[['pp_method', 'filtering']].astype(str).agg('-'.join, axis=1)
+
+# Define options and metrics
+varying_options = (df[options].nunique()).loc[lambda x:x>1].index.to_list()
+metrics_of_interest = ['ARI', 'NMI', 'corr', 'AUPRC', 'n_cells', 'n_vars', 'n_GBC_groups']
+metrics_of_interest += [
+    'freq_lineage_biased_muts', 'median_n_vars_per_cell', 
+    'transitions_vs_transversions_ratio', 'n_dbSNP', 'n_REDIdb'
+]
+
 
 ##
 
 
-# Gather coverage info
-maegatk_mock = pd.read_csv(os.path.join(path_data, 'mock_maegatk', 'coverage.txt.gz'), header=None)
-maegatk_mock.columns = ['pos', 'cell', 'n']
-mito_prep = pd.read_csv(os.path.join(path_data, 'mito_preprocessing', 'coverage.txt.gz'), header=None)
-mito_prep.columns = ['pos', 'cell', 'n']
-maegatk_mock_wide = maegatk_mock.pivot_table(index='cell', columns='pos', values='n').fillna(0)
-mito_prep_wide = mito_prep.pivot_table(index='cell', columns='pos', values='n').fillna(0)
-sites = list(set(mito_prep_wide.columns) & set(maegatk_mock_wide.columns))
-maegatk_mock_wide = maegatk_mock_wide[sites]
-mito_prep_wide = mito_prep_wide[sites]
+# 2. Plot ------------------------------------#
 
-# Gather qualified cells and subset both coverage table for them
-cells = pd.read_csv(path_QC_cells, header=None)[0].unique().tolist()
-cells = [ x.split('_')[0] for x in  cells ] 
-subset = list(set(cells) & set(maegatk_mock_wide.index) & set(mito_prep_wide.index))
+# Pre-processing method - filtering combo
+fig =  plt.figure(figsize=(14,6.5))
 
-# Plot
-fig, axs = plt.subplots(1,2,figsize=(10,5), subplot_kw={'projection': 'polar'})
-mt.pl.MT_coverage_by_gene_polar(mito_prep.query('cell in @subset'), sample='MiTo', ax=axs[0])
-mt.pl.MT_coverage_by_gene_polar(maegatk_mock.query('cell in @subset'), sample='maegatk', ax=axs[1])
-fig.subplots_adjust(top=.8, bottom=.2, left=.2, right=.8 )
+x_order = ['MDA_clones', 'MDA_lung', 'MDA_PT']
+by_order = ['samtools-baseline', 'freebayes-baseline', 'cellsnp-lite-MQuad', 'MiTo-MiTo', 'maegatk-MiTo']
+cmap = plu.create_palette(df, 'combo', order=by_order, col_list=sc.pl.palettes.vega_10_scanpy)
+test = (df['combo'].isin(['maegatk-MQuad', 'MiTo-MQuad']))
+
+for i,metric in enumerate(metrics_of_interest):
+    ax = fig.add_subplot(2,6,i+1)
+    plu.bar(
+        df.loc[~test].set_index('job_id'), 
+        x='sample', y=metric, 
+        by='combo',
+        x_order=x_order,
+        by_order=by_order,
+        categorical_cmap=cmap,
+        ax=ax
+    )
+    plu.format_ax(ax=ax, 
+                  xticks=x_order if i>=6 else [ '' for _ in range(3) ], 
+                  rotx=90,
+                  xlabel='', ylabel=metric, reduced_spines=True)
+    if i==5:
+        plu.add_legend(cmap, label='Preprocessing-\nMT-SNVs filtering\ncombination', 
+                       ax=ax, bbox_to_anchor=(1,0.3), loc='upper left')
+
+fig.subplots_adjust(top=.90, bottom=.25, right=.82, left=.05, wspace=.8)
 fig.savefig(os.path.join(path_figures, 'Supp_Fig_6.pdf'))
 
 

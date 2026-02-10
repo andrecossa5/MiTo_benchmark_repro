@@ -1,6 +1,6 @@
 """
 Supp Fig 7
---pp-method AND --filtering method combinations benchmark.
+Plot maegatk/MiTo with and without MiTo filter.
 """
 
 import os
@@ -52,37 +52,42 @@ metrics_of_interest += [
 ##
 
 
-# 2. Plot ------------------------------------#
-
-# Pre-processing method - filtering combo
-fig =  plt.figure(figsize=(14,6.5))
+# 2. Plot -------------------------- 
 
 x_order = ['MDA_clones', 'MDA_lung', 'MDA_PT']
-by_order = ['samtools-baseline', 'freebayes-baseline', 'cellsnp-lite-MQuad', 'MiTo-MiTo', 'maegatk-MiTo']
-cmap = plu.create_palette(df, 'combo', order=by_order, col_list=sc.pl.palettes.vega_10_scanpy)
-test = (df['combo'].isin(['maegatk-MQuad', 'MiTo-MQuad']))
+by_order = ['MiTo-MQuad', 'MiTo-MiTo', 'maegatk-MQuad', 'maegatk-MiTo']
+colors = ['#EE8383', '#d62728', '#D99BEC', '#aa40fc']
+cmap = dict(zip(by_order, colors))
 
-for i,metric in enumerate(metrics_of_interest):
-    ax = fig.add_subplot(2,6,i+1)
-    plu.bar(
-        df.loc[~test].set_index('job_id'), 
-        x='sample', y=metric, 
-        by='combo',
-        x_order=x_order,
-        by_order=by_order,
-        categorical_cmap=cmap,
-        ax=ax
-    )
-    plu.format_ax(ax=ax, 
-                  xticks=x_order if i>=6 else [ '' for _ in range(3) ], 
-                  rotx=90,
-                  xlabel='', ylabel=metric, reduced_spines=True)
-    if i==5:
-        plu.add_legend(cmap, label='Preprocessing-\nMT-SNVs filtering\ncombination', 
-                       ax=ax, bbox_to_anchor=(1,0.3), loc='upper left')
 
-fig.subplots_adjust(top=.90, bottom=.25, right=.82, left=.05, wspace=.8)
-fig.savefig(os.path.join(path_figures, 'Supp_fig_7.pdf'))
+##
+
+fig, axs = plt.subplots(1,2,figsize=(7,3.5))
+
+plu.bar(
+    df.loc[df['combo'].isin(by_order)].set_index('job_id'), 
+    x='sample', y='ARI', 
+    by='combo',
+    x_order=x_order,
+    by_order=by_order,
+    categorical_cmap=cmap,
+    ax=axs[0]
+)
+plu.format_ax(ax=axs[0], xlabel='', ylabel='ARI', reduced_spines=True, rotx=90)
+plu.bar(
+    df.loc[df['combo'].isin(by_order)].set_index('job_id'), 
+    x='sample', y='NMI', 
+    by='combo',
+    x_order=x_order,
+    by_order=by_order,
+    categorical_cmap=cmap,
+    ax=axs[1]
+)
+plu.format_ax(ax=axs[1], xlabel='', ylabel='NMI', reduced_spines=True, rotx=90)
+plu.add_legend(cmap, label='Preprocessing-\nMT-SNVs filtering\ncombination', ax=axs[1])
+
+fig.subplots_adjust(top=.90, bottom=.3, right=.7, left=.1, wspace=.35)
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_7.pdf'))
 
 
 ##

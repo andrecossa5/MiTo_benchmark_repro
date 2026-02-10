@@ -1,8 +1,6 @@
 """
 Supp Fig 11
-MiTo genotyping (--bin_method == MiTo) hyper-parameters tuning:
-    1. Binomial Mixture probability threshold: --t_prob
-    2. Minimum cell prevalence: --min_cell_prevalence
+MiTo genotyping --bin_method benchmark vs "vanilla" baseline method.
 """
 
 import os
@@ -30,7 +28,7 @@ plu.set_rcParams({'figure.dpi':350})
 ##
 
 
-# 1. Get metrics  -------------------------- 
+# 1. Get metrics  -------------------------- #
 
 # Format metrics df 
 L = []
@@ -42,32 +40,41 @@ df = pd.concat(L)
 df.loc[df['pp_method'] == 'mito_preprocessing', 'pp_method'] = 'MiTo'
 
 varying_options = (df[options].nunique()).loc[lambda x:x>1].index.to_list()
-metrics_of_interest = ['ARI', 'corr', 'n_cells', 'n_GBC_groups']
+metrics_of_interest = ['ARI', 'NMI', 'corr', 'AUPRC', 'n_cells', 'n_vars', 'n_GBC_groups']
+metrics_of_interest += [ 'median_n_vars_per_cell' ]
 
 
 ##
 
 
-# 2. Plot ARI across samples, t_prob and min_cell_prevalence parameter values  -------------------------- 
+# 2. Metrics of interest: MiTo vs vanilla genotyping -------------------------- #
 
-fig, axs = plt.subplots(1,3,figsize=(12,2.5))
+cmap = {'vanilla' : '#E8E0E0', 'MiTo' : '#D15757' }
 
-by_order = ['0.01', '0.05', '0.1']
-x_order = ['0.5', '0.7', '0.9']
-cmap = plu.create_palette(df, 'min_cell_prevalence', palette='Oranges', order=by_order)
+for sample in ['MDA_clones', 'MDA_PT', 'MDA_lung']:
 
-for i,sample in enumerate(['MDA_clones', 'MDA_PT', 'MDA_lung']):
-    plu.bar(
-        df.query('bin_method=="MiTo" and sample==@sample'), 
-        ax=axs[i], x='t_prob', y='ARI', by='min_cell_prevalence',
-        x_order=x_order, by_order=by_order, categorical_cmap=cmap
-    )
-    plu.format_ax(ax=axs[i], ylabel='ARI', title=sample,
-        xlabel='Binomial mixture \nprobability threshold', reduced_spines=True)
+    # Fig
+    fig, axs = plt.subplots(1,len(metrics_of_interest), figsize=(12,2.5))
 
-plu.add_legend(cmap, label='Min prevalence', ax=axs[i])
-fig.subplots_adjust(left=.1, right=.8, top=.9, bottom=.25)
-fig.savefig(os.path.join(path_figures, 'Supp_Fig_11.pdf'))
+    for i,metric in enumerate(metrics_of_interest):
+
+        if sample == 'MDA_PT':
+            df_mito = df.query('sample==@sample and bin_method=="MiTo" and t_prob=="0.7" and min_cell_prevalence=="0.05"')  
+        else:
+            df_mito = df.query('sample=="MDA_PT" and bin_method=="MiTo" and t_prob=="0.7" and min_cell_prevalence=="0.1"')
+
+        df_vanilla = df.query('sample==@sample and bin_method=="vanilla"')
+        df = pd.concat([df_vanilla,df_mito]).set_index('job_id')
+
+        plu.bar(
+            df,
+            x='min_AD', y=metric, by='bin_method', ax=axs[i], 
+            categorical_cmap=cmap, by_order=['vanilla', 'MiTo'], x_order=["1","2"]
+        )
+        plu.format_ax(ax=axs[i], reduced_spines=True, xlabel='min n alt UMIs', ylabel=metric)
+
+    fig.tight_layout()
+    fig.savefig(os.path.join(path_figures, f'Supp_Fig_11_{sample}.pdf'))
 
 
 ##

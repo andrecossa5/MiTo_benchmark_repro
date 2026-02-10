@@ -1,13 +1,13 @@
 """
 Supp Fig 10
-Supervised characterization of ground-truth clones MT-SNVs load.
+MiTo genotyping (--bin_method == MiTo) hyper-parameters tuning:
+    1. Binomial Mixture probability threshold: --t_prob
+    2. Minimum cell prevalence: --min_cell_prevalence
 """
 
 import os
-import numpy as np
 import pandas as pd
 import mito as mt
-import scanpy as sc
 import matplotlib
 import matplotlib.pyplot as plt
 import plotting_utils as plu
@@ -19,7 +19,7 @@ matplotlib.use('macOSX')
 
 # Set paths
 path_main = '/Users/IEO5505/Desktop/MI_TO/MiTo_benchmark_repro'
-path_data = os.path.join(path_main, 'data', 'general', 'AFMs')
+path_data = os.path.join(path_main, 'data', 'bench', 'tune_genotyping')
 path_figures = os.path.join(path_main, 'results', 'figures', 'Supp')
 
 
@@ -30,66 +30,44 @@ plu.set_rcParams({'figure.dpi':350})
 ##
 
 
-# 1. Gather n of MT-SNVs per lentiviral clone (GBC labels) -----------------------------------#
+# 1. Get metrics  -------------------------- 
 
+# Format metrics df 
 L = []
-fdr_treshold = .05
+for folder,_,files in os.walk(path_data):
+    if any([ x.startswith('all') for x in files]):
+        df,metrics,options = mt.ut.format_tuning(folder)
+        L.append(df)
+df = pd.concat(L)
+df.loc[df['pp_method'] == 'mito_preprocessing', 'pp_method'] = 'MiTo'
 
-samples = ['MDA_clones', 'MDA_PT', 'MDA_lung']
-for sample in samples:
-    # Read unfiltered AFM
-    afm = sc.read(os.path.join(path_data, sample, 'afm_unfiltered.h5ad'))
-    afm = mt.pp.filter_cells(afm, cell_filter='filter2')
-    # Filter GBC-enriched muts
-    afm = mt.pp.filter_afm(afm, lineage_column='GBC', min_cell_number=5, compute_enrichment=True)
-    fdrs = afm.var.loc[:,afm.var.columns.str.startswith('FDR')]
-    df = pd.DataFrame({
-        'cat' : np.where(np.sum(fdrs<=fdr_treshold)>0, 'Defined', 'Undefined'),
-        'sample' : [ sample for _ in range(fdrs.columns.size) ],
-        'n_muts' : np.sum(fdrs<=fdr_treshold)
-    })
-    L.append(df)
-
-df_plot = pd.concat(L).reset_index(drop=True)
-df_plot['sample'] = pd.Categorical(df_plot['sample'], categories=samples[::-1])
+varying_options = (df[options].nunique()).loc[lambda x:x>1].index.to_list()
+metrics_of_interest = ['ARI', 'corr', 'n_cells', 'n_GBC_groups']
 
 
 ##
 
 
-# 1. Plot -----------------------------------#
+# 2. Plot ARI across samples, t_prob and min_cell_prevalence parameter values  -------------------------- 
 
-fig, ax = plt.subplots(figsize=(4,3))
+fig, axs = plt.subplots(1,3,figsize=(12,2.5))
 
-cmap = plu.create_palette(df_plot, 'cat', order=['Undefined', 'Defined'], palette='Greys')
-plu.bb_plot(df_plot, cov1='sample', cov2='cat', ax=ax, categorical_cmap=cmap, show_y=True)
-plu.add_legend(cmap, label='Clone type', loc='center', bbox_to_anchor=(.5,1.4), ncols=2, ax=ax)
-fig.subplots_adjust(top=.6, bottom=.3, right=.85, left=.25)
-fig.savefig(os.path.join(path_figures, 'Supp_Fig_10a.pdf'))
+by_order = ['0.01', '0.05', '0.1']
+x_order = ['0.5', '0.7', '0.9']
+cmap = plu.create_palette(df, 'min_cell_prevalence', palette='Oranges', order=by_order)
 
+for i,sample in enumerate(['MDA_clones', 'MDA_PT', 'MDA_lung']):
+    plu.bar(
+        df.query('bin_method=="MiTo" and sample==@sample'), 
+        ax=axs[i], x='t_prob', y='ARI', by='min_cell_prevalence',
+        x_order=x_order, by_order=by_order, categorical_cmap=cmap
+    )
+    plu.format_ax(ax=axs[i], ylabel='ARI', title=sample,
+        xlabel='Binomial mixture \nprobability threshold', reduced_spines=True)
 
-##
-
-
-fig, ax = plt.subplots(figsize=(4,3))
-
-cmap = plu.create_palette(df_plot, 'sample', order=samples, palette='tab10')
-plu.dist(df_plot, x='n_muts', by='sample', ax=ax, linewidth=.75, alpha=.3, categorical_cmap=cmap)
-medians = {}
-for sample in samples:
-    median = np.median(df_plot.query('sample==@sample')['n_muts'])
-    ax.axvline(x=median, linewidth=.75, linestyle='--', c=cmap[sample])
-    medians[sample] = median
-
-ax.text(.43, .75, str(int(medians['MDA_clones'])), transform=ax.transAxes, c=cmap['MDA_clones'])
-ax.text(.38, .85, str(int(medians['MDA_lung'])), transform=ax.transAxes, c=cmap['MDA_lung'])
-ax.text(.33, .95, str(int(medians['MDA_PT'])), transform=ax.transAxes, c=cmap['MDA_PT'])
-
-plu.format_ax(ax=ax, xlabel='n enriched MT-SNVs', ylabel='Density', 
-              title=f'n lentiviral clones: {df_plot.shape[0]}', reduced_spines=True)
-plu.add_legend(cmap, label='Sample', loc='upper right', bbox_to_anchor=(1,1), ax=ax)
-fig.tight_layout()
-fig.savefig(os.path.join(path_figures, 'Supp_Fig_10b.pdf'))
+plu.add_legend(cmap, label='Min prevalence', ax=axs[i])
+fig.subplots_adjust(left=.1, right=.8, top=.9, bottom=.25)
+fig.savefig(os.path.join(path_figures, 'Supp_Fig_10.pdf'))
 
 
 ##

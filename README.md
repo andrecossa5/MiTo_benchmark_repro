@@ -13,13 +13,20 @@ tree source_data
 this folder stores all preprocessed `data` and the associated `results` folders supporting the manuscript findings.
 
 ## Reproduce environment
-To run this code, we need to install `MiTo` and its dependencies. See [MiTo](https://github.com/andrecossa5/MiTo).
+To run this code, reproduce the conda environment in `envs/environment.yml`. It includes `scmito==0.2.1` (the legacy MiTo release these scripts are written for) and the additional libraries the scripts need (`moscot`):
+
+```bash
+mamba env create -f envs/environment.yml
+conda activate mito_paper
+```
+
+The R script `code/Supp/Supp_Fig_19/3_redeem_data_cleaning.R` also needs R with `tidyverse` and `redeemR`, which are not part of this recipe (its output is in `source_data`).
 
 ## Reproduce analyses
 The `code` directory stores all the code to reproduce the main (Fig. 2-5) and Supplementary (Supp 2-20) figures. To acess that, clone the repo:
 
 ```bash
-git clone 
+git clone https://github.com/andrecossa5/MiTo_benchmark_repro.git
 cd MiTo_benchmark_repro
 tree code
 ```

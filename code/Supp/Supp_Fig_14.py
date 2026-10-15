@@ -43,13 +43,13 @@ AD = csr_matrix(AD.values).astype(np.int64)
 DP = csr_matrix(DP.values).astype(np.int64)
 afm_original = AnnData(X=AF, 
               var=pd.DataFrame(index=[ f'MT-SNV {i}' for i in range(AD.shape[1]) ]),
-              layers={'AD':AD, 'DP':DP},
+              layers={'AD':AD, 'DP':DP, 'site_coverage':DP},    # cellSNP DP is the depth at the variant's site
               uns={'pp_method':'custom','scLT_system':'Smart-seq2'})
 
 # 2. Explore data with MiTo defaults (tuned on MAESTER data) --------------------------------------- # 
 
 # Try simple vanilla first
-mt.pp.call_genotypes(afm_original)
+mt.pp.call_genotypes(afm_original, bin_method='vanilla')
 mt.pp.compute_distances(afm_original, precomputed=True)
 
 fig, ax = plt.subplots(figsize=(3,3))

@@ -72,8 +72,8 @@ df = (
 
 # Choose phylogenies with richest character matrices
 (
-    df.groupby('scLT_system')
-    .apply(lambda x: x.sort_values('n_characters', ascending=False).head(1))
+    df.sort_values('n_characters', ascending=False)
+    .groupby('scLT_system').head(1)
     [['scLT_system', 'sample']]
 )
 

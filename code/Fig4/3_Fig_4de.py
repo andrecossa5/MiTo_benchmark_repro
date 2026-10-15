@@ -46,7 +46,7 @@ with open(os.path.join(path_lineage_inference, 'annotated_tree.pickle'), 'rb') a
 fig, axs = plt.subplots(2,1,figsize=(5,2.5))
 
 # Order cell states
-cell_states = tree.cell_meta['cell_state'].value_counts().index.values.to_list()
+cell_states = tree.cell_meta['cell_state'].value_counts().index.to_list()
 
 # MT
 df_ = pd.crosstab(tree.cell_meta['cell_state'], tree.cell_meta['MiTo clone'], normalize=1)
@@ -100,7 +100,7 @@ lp = lp.prepare(
     lineage_attr={"attr": "obsp", "key": "mt_distances", "cost": "custom"},
 )
 lp = lp.solve(alpha=0.99, epsilon=1e-3, tau_a=0.99)
-cell_states = adata.obs['cell_state'].value_counts().index.values.to_list()
+cell_states = adata.obs['cell_state'].value_counts().index.to_list()
 cell_transition = lp.cell_transition(
     source=1,
     target=2,
@@ -146,7 +146,7 @@ lp = lp.prepare(
     lineage_attr={"attr": "obsp", "key": "gbc_distances", "cost": "custom"},
 )
 lp = lp.solve(alpha=0.99, epsilon=1e-3, tau_a=0.99)
-cell_states = adata.obs['cell_state'].value_counts().index.values.to_list()
+cell_states = adata.obs['cell_state'].value_counts().index.to_list()
 cell_transition = lp.cell_transition(
     source=1,
     target=2,

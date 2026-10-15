@@ -167,7 +167,7 @@ for folder,_,files in os.walk(path_tuning):
         df,metrics,options = mt.ut.format_tuning(folder)
         L.append(df)
 df = pd.concat(L)
-df['cell_filter'].loc[lambda x: x.isna()] = 'No filter'
+df.loc[df['cell_filter'].isna(), 'cell_filter'] = 'No filter'
 
 # Define options and metrics
 varying_options = (df[options+['cell_filter']].nunique()).loc[lambda x:x>1].index.to_list()

@@ -200,10 +200,7 @@ fig.savefig(os.path.join(path_figures, 'Fig_2g.pdf'))
 
 
 # Fig 2h
-cov = pd.read_csv(os.path.join(path_afms, sample, 'coverage.txt.gz'), header=None)
-cov.columns = ['pos', 'cell', 'n']
-cov['cell'] = cov['cell'].map(lambda x: f'{x}_{sample}')
-cov = cov.query('cell in @afm.obs_names')
+cov = mt.io.read_coverage(afm, os.path.join(path_afms, sample, 'coverage.txt.gz'), sample)   # cell x position
 
 fig, ax = plt.subplots(figsize=(2,2),subplot_kw={'projection': 'polar'})
 mt.pl.MT_coverage_polar(cov, var_subset=afm.var_names, ax=ax, 
@@ -241,7 +238,7 @@ for i,clone in enumerate(mapping):
                          legend=False, outline=True, kwargs={'colorbar_loc':None})
     axs[i,0].set(title=f'clone-{i+1}')
     axs[i,1].set(title=mut)
-    plu.add_cbar(afm[:,mut].X.A.flatten(), palette='afmhot_r', ax=axs[i,1], label='AF')
+    plu.add_cbar(afm[:,mut].X.toarray().flatten(), palette='afmhot_r', ax=axs[i,1], label='AF')
 
 fig.tight_layout()
 fig.savefig(os.path.join(path_figures, 'Fig_2i.pdf'))

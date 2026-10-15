@@ -122,7 +122,7 @@ for i,feat in enumerate(['sample', 'cell_state']):
     sc.pl.umap(adata, color=feat, ax=axs[i], show=False, 
                palette=cmaps[feat], legend_loc='on data', frameon=False)
 fig.tight_layout()
-fig.savefig(os.path.join(path_figures, 'Fig_2b.pdf'))
+fig.savefig(os.path.join(path_figures, 'Fig_4b.pdf'))
 
 
 ##

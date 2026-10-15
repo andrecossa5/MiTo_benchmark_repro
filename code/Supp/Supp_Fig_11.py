@@ -64,10 +64,10 @@ for sample in ['MDA_clones', 'MDA_PT', 'MDA_lung']:
             df_mito = df.query('sample=="MDA_PT" and bin_method=="MiTo" and t_prob=="0.7" and min_cell_prevalence=="0.1"')
 
         df_vanilla = df.query('sample==@sample and bin_method=="vanilla"')
-        df = pd.concat([df_vanilla,df_mito]).set_index('job_id')
+        df_plot = pd.concat([df_vanilla,df_mito]).set_index('job_id')
 
         plu.bar(
-            df,
+            df_plot,
             x='min_AD', y=metric, by='bin_method', ax=axs[i], 
             categorical_cmap=cmap, by_order=['vanilla', 'MiTo'], x_order=["1","2"]
         )

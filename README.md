@@ -20,6 +20,8 @@ mamba env create -f envs/environment.yml
 conda activate mito_paper
 ```
 
+The exact versions the scripts were last run with are in `envs/environment.lock.txt` (`pip install -r envs/environment.lock.txt` in a Python 3.12 environment).
+
 The R script `code/Supp/Supp_Fig_19/3_redeem_data_cleaning.R` also needs R with `tidyverse` and `redeemR`, which are not part of this recipe (its output is in `source_data`).
 
 ## Reproduce analyses

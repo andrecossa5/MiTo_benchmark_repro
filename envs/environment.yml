@@ -1,5 +1,5 @@
 # Environment of the MiTo paper analyses (the figure scripts in code/).
-# scmito 1.0.0 is the MiTo release (the original API) these scripts are written for;
+# scmito 1.0.2 is the MiTo release (the original API) these scripts are written for;
 # it installs its own dependencies (anndata, scanpy, cassiopeia-mt, plotting_utils, ...).
 # Tested with Python 3.12, numpy 2.5, pandas 3.0, scipy 1.18, matplotlib 3.11, scanpy 1.12.
 #
@@ -12,5 +12,5 @@ dependencies:
   - python=3.12
   - pip
   - pip:
-      - scmito==1.0.0
+      - scmito==1.0.2
       - moscot            # Fig. 4d-e

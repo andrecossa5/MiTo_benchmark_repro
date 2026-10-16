@@ -13,7 +13,7 @@ tree source_data
 this folder stores all preprocessed `data` and the associated `results` folders supporting the manuscript findings.
 
 ## Reproduce environment
-To run this code, reproduce the conda environment in `envs/environment.yml`. It includes `scmito==0.2.1` (the legacy MiTo release these scripts are written for) and the additional libraries the scripts need (`moscot`):
+To run this code, reproduce the conda environment in `envs/environment.yml`. It includes `scmito==1.0.0` (the MiTo release these scripts are written for) and the additional libraries the scripts need (`moscot`):
 
 ```bash
 mamba env create -f envs/environment.yml
